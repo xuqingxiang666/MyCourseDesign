@@ -1,0 +1,72 @@
+feat: 补齐core数据层并修复编译错误，实现笔记新增功能
+
+项目首次编译通过并可在模拟器运行。本次提交合并了原计划的 #2、#3 两次提交，
+因为二者强耦合：删除 AS 模板 Fragment 后必须同时确定 viewBinding 开关，
+而开启 viewBinding 后 MainActivity 的 StateFlow 收集写法必须一并修正，
+否则中间状态无法编译。
+
+## 修复的编译错误
+
+原报错：
+  e: [ksp] InjectProcessingStep was unable to process
+     'NoteViewModel(error.NonExistentClass)'
+
+根因不是 Hilt 配置问题，而是 core 模块**完全没有源码**：
+NoteViewModel.kt 引用的 com.example.core.data.entity.Note 与
+com.example.core.data.dao.NoteDao 从未被创建，导致 :core:compileDebugKotlin
+输出 NO-SOURCE，app 侧解析不到类型。
+
+## 新增：core 数据层
+
+- data/entity/Note.kt      Room 实体，含 lastModified / version 字段
+                           （后续"冲突解决机制"的核心字段）
+- data/dao/NoteDao.kt      DAO，含 Flow 可观察查询、增删改、
+                           @Transaction 状态切换方法
+- data/NoteDatabase.kt     RoomDatabase，version=1，exportSchema=true
+- data/DatabaseModule.kt   Hilt 模块，提供数据库与 DAO 单例
+- core/build.gradle.kts    增加 room.schemaLocation 参数，
+                           schema 导出至 core/schemas/ 并纳入版本控制
+
+## 修改：app 模块
+
+- build.gradle.kts         viewBinding 由 false 改为 true
+- MainActivity.kt          observe() -> repeatOnLifecycle(STARTED) + collect
+                           StateFlow 没有 observe() 方法，原写法编译失败
+                           同时改用 ViewBinding，并在判空前 trim() 输入
+- NoteAdapter.kt           RecyclerView.Adapter -> ListAdapter + DiffUtil
+                           改用 ViewBinding，新增置顶/归档状态徽章
+- item_note.xml            CardView -> MaterialCardView（复用 material 依赖，
+                           无需新增 androidx.cardview）
+                           硬编码颜色 #333333/#666666 改为 ?attr/colorOnSurface
+                           等主题属性，修复暗色模式下黑底黑字问题
+- strings.xml              移除 AS 模板遗留字符串
+
+## 删除：Android Studio 导航模板残留
+
+FirstFragment.kt、SecondFragment.kt、fragment_first.xml、
+fragment_second.xml、content_main.xml、nav_graph.xml、menu_main.xml、
+dimens.xml 及 values-land / values-w600dp / values-w1240dp 三个空目录。
+
+这些是 AS "Basic Views Activity" 模板自带的示例代码，与笔记应用无关，
+且其 viewBinding 用法与项目设置直接冲突导致编译失败。
+
+## 新增：项目文档
+
+- docs/PROJECT_PLAN.md     项目全貌、12 次提交规划、三个模块设计、
+                           版本锁定清单、构建命令
+- docs/PROGRESS.md         进度快照与踩坑记录，供跨会话交接使用
+- docs/screenshots/        模拟器实测截图
+
+## 实测验证（模拟器 emulator-5554，Android 17 / API 37.2）
+
+- :app:assembleDebug                    BUILD SUCCESSFUL（APK 7.12 MB）
+- adb install                           Success
+- 启动 MainActivity                     进程存活，无崩溃
+- 新建笔记（标题/内容）                  成功
+- sqlite3 查询 notes 表                 1 行，字段值全部正确
+- 列表 DiffUtil 自动刷新                 卡片正确渲染
+
+## 其它
+
+- settings.gradle.kts / 各模块 build.gradle.kts / libs.versions.toml 等
+  多模块脚手架配置，为前序环境搭建阶段的成果
