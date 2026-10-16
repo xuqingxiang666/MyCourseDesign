@@ -36,24 +36,47 @@
 
 ---
 
-## 3. 开发阶段与提交规划（12 次提交）
+## 3. 开发阶段与提交规划（细粒度，共 20+ 次提交）
 
-每次提交都必须是**可编译、职责单一、能讲清楚**的单元。
+**两条必须同时满足的约束**：
 
-| # | 阶段 | 提交内容 | 验收标准 | 状态 |
+1. **课设硬性要求**：Git 提交次数 ≥ 10 次有效提交 → 因此**步骤要切细，不轻易合并**。
+2. **工程底线**：每次提交都必须 `:app:assembleDebug` 编译通过 → 中间状态不能是坏的。
+
+**为同时满足两者而采用的排序技巧**：**先加声明、再加实现、最后动 UI**。
+例如先建好 `NoteRepository` 接口（不影响编译），再写实现，最后才改 ViewModel。
+这样每个中间态都是绿的，但步骤数足够多。
+
+| # | 阶段 | 提交内容 | 能否独立编译 | 状态 |
 |---|---|---|---|---|
-| 1 | 环境 | `feat: 初始化Android课设项目` | AS 能 Sync | ✅ `de0231a` |
-| 2 | 阶段1 | `chore: 清理AS导航模板残留并改用MaterialCardView` | 无模板文件残留 | ⬜ |
-| 3 | 阶段2 | `feat(core): 实现Room数据层(Note/NoteDao/NoteDatabase/Hilt模块)` | `:app:assembleDebug` **通过** | ⬜ |
-| 4 | 阶段3 | `feat(app): 补全笔记增删改查与DiffUtil刷新` | App 可增删改查 | ⬜ |
-| 5 | 阶段3 | `feat(app): 新增归档置顶与暗色主题` | 归档/置顶生效 | ⬜ |
-| 6 | 阶段5 | `feat(app): Markdown实时预览与草稿自动保存` | 边输入边预览 | ⬜ |
-| 7 | 阶段5 | `feat(core): 笔记加密与生物识别解锁` | 指纹可解锁 | ⬜ |
-| 8 | 阶段5 | `feat(core): 基于lastModified的LWW冲突解决机制` | 冲突有确定结果 | ⬜ |
-| 9 | 阶段4 | `feat(sharecard): 分享卡片生成/CSV导出/FileProvider分享` | 能分享到微信等 | ⬜ |
-| 10 | 阶段6 | `test: 补充单元测试并将覆盖率提升至60%以上` | 覆盖率报告 ≥60% | ⬜ |
-| 11 | 阶段6 | `docs: 添加README与架构说明` | README 完整 | ⬜ |
-| 12 | 阶段6 | `chore: 修复Gradle Wrapper跨机器可用性并完善gitignore` | clone 后可构建 | ⬜ |
+| 1 | 环境 | `feat: 初始化Android课设项目` | ✅ | ✅ `de0231a` |
+| 2 | 阶段1+2 | `feat: 补齐core数据层并修复编译错误，实现笔记新增功能` | ✅ | ✅ `20fa3c1` |
+| 3 | 阶段3 | `refactor(core): 引入NoteRepository抽象，隔离UI与DAO` | ✅ 纯新增，无行为变化 | ⬜ |
+| 4 | 阶段3 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ DAO 方法全量委托 | ⬜ |
+| 5 | 阶段3 | `feat(app): 新增编辑与删除笔记功能` | ✅ | ⬜ |
+| 6 | 阶段3 | `feat(app): 新增笔记置顶与归档功能` | ✅ | ⬜ |
+| 7 | 阶段3 | `feat(app): 适配暗色主题并完善列表视觉` | ✅ | ⬜ |
+| 8 | 阶段5 | `feat(core): Note实体新增加密相关字段与DAO支持` | ✅ 纯加字段 | ⬜ |
+| 9 | 阶段5 | `feat(core): 实现笔记加密与密钥管理` | ✅ | ⬜ |
+| 10 | 阶段5 | `feat(app): 接入生物识别解锁与加密笔记界面` | ✅ | ⬜ |
+| 11 | 阶段5 | `feat(app): 实现Markdown渲染器` | ✅ 纯工具类 | ⬜ |
+| 12 | 阶段5 | `feat(app): 接入Markdown实时预览与草稿自动保存` | ✅ | ⬜ |
+| 13 | 阶段5 | `feat(core): 实现基于lastModified的LWW冲突解决机制` | ✅ 纯逻辑类 | ⬜ |
+| 14 | 阶段4 | `feat(sharecard): 定义P4插件对外契约与入口` | ✅ 纯接口 | ⬜ |
+| 15 | 阶段4 | `feat(sharecard): 实现分享卡片Bitmap绘制` | ✅ | ⬜ |
+| 16 | 阶段4 | `feat(sharecard): 实现FileProvider分享到其他App` | ✅ | ⬜ |
+| 17 | 阶段4 | `feat(sharecard): 实现CSV导出(UTF-8 BOM防乱码)` | ✅ | ⬜ |
+| 18 | 阶段4 | `feat(app): 主App接入P4插件入口` | ✅ | ⬜ |
+| 19 | 阶段6 | `test(core): 补充数据层与领域逻辑单元测试` | ✅ | ⬜ |
+| 20 | 阶段6 | `test(app): 补充UI层单元测试并将覆盖率提升至60%` | ✅ | ⬜ |
+| 21 | 阶段6 | `docs: 添加README与架构说明` | ✅ | ⬜ |
+| 22 | 阶段6 | `chore: 完善gitignore与gitattributes，规范仓库卫生` | ✅ | ⬜ |
+
+> **注意**：#2 由原计划的两次提交合并而来（原因见 `PROGRESS.md`）。
+> 合并后仍有 22 次提交，相对 ≥10 次的要求有充足余量。
+>
+> **关于"有效提交"的判断标准**：每次提交都有明确的、可独立描述的功能增量，
+> 且能编译通过。不使用"格式化代码"、"修个错别字"这类无意义提交充数。
 
 ---
 
@@ -365,7 +388,7 @@ startActivity(ShareCardEntry.newIntent(this, note.id))
 
 | 项 | 锁定值 | 说明 |
 |---|---|---|
-| Gradle | 8.2 | 本地已部署，改 URL 不改版本（见提交 #12） |
+| Gradle | 8.2 | 本地已部署，**wrapper 的 file:// URL 不要改**，原因见下 |
 | AGP | 8.2.2 | |
 | Kotlin | 1.9.22 | |
 | KSP | 1.9.22-1.0.17 | 必须与 Kotlin 严格对应 |
@@ -379,6 +402,36 @@ startActivity(ShareCardEntry.newIntent(this, note.id))
 **新增依赖一律不加**——所有需要的库（Room / Hilt / security-crypto / biometric / material / lifecycle / 协程）
 都已经写在 `libs.versions.toml` 和 `core/build.gradle.kts` 里，且本地缓存齐全。**不需要联网。**
 
+### ★ 关于 `gradle-wrapper.properties` 的 `distributionUrl`
+
+当前值（**保持不动**）：
+```properties
+distributionUrl=file\:///C:/Users/dashen/.gradle/wrapper/dists/gradle-8.2-bin/manual/gradle-8.2-bin.zip
+```
+
+**曾尝试改回官方 HTTPS 地址，实测失败并已回滚。** 原因：
+
+Gradle Wrapper 用 **`distributionUrl` 的哈希值**作为缓存目录名，放在
+`~/.gradle/wrapper/dists/gradle-8.2-bin/<hash>/` 下。一旦 URL 变化，哈希随之改变，
+Gradle 会认为"这个发行包从未下载过"，于是**尝试重新下载**。
+而本机网络访问 `services.gradle.org` 会被卡死（与 GitHub 同样的封锁问题），
+构建将无限期挂起。**实测已复现：命令卡死超过 10 分钟，只能强制终止。**
+
+| 影响 | 说明 |
+|---|---|
+| 本机开发 | ✅ 用 file:// 地址，构建正常 |
+| 老师 clone 后构建 | ⚠️ **会失败**（他的机器上没有这个 zip） |
+
+**结论与建议（答辩时若被问起，可这样回答）**：
+这是"极端网络环境下的妥协方案"。要在评分机器上也能构建，需要把 Gradle 发行包
+一并交付（或改用校内 Maven 镜像），而不是简单改 URL —— 那会把本机的构建也弄坏。
+**因此此项不列入提交计划**，保持现状。
+
+> 如果老师明确要求"clone 下来必须能直接跑"，可行的做法是：
+> 把 `gradle-8.2-bin.zip`（约 100 MB）放到仓库的 `gradle/wrapper/` 下并提交，
+> 同时把 URL 改成相对路径 `distributionUrl=gradle-8.2-bin.zip`。
+> 这会让仓库体积变大，但能保证任何机器可构建。**需用户确认后再做。**
+
 ---
 
 ## 7. 构建与验证命令
@@ -388,6 +441,8 @@ startActivity(ShareCardEntry.newIntent(this, note.id))
 $env:JAVA_HOME="C:\Users\dashen\.jdks\ms-17.0.20.1"
 
 # 编译主 App
+# 注意：首次构建若报 "No cached version of com.google.dagger:hilt-compiler"，
+#       去掉 --offline 联网补齐一次即可，之后可继续离线构建。
 .\gradlew.bat :app:assembleDebug --offline --console=plain
 
 # 只编译 core 模块（Android Studio 没有这个菜单项，命令行才有）
@@ -399,6 +454,34 @@ $env:JAVA_HOME="C:\Users\dashen\.jdks\ms-17.0.20.1"
 # 查看某个模块的详细报错（AS 里看不到的，都靠这个）
 .\gradlew.bat :core:compileDebugKotlin --stacktrace --info
 ```
+
+### 模拟器（统一使用 E 盘的 Pixel_10_Pro）
+
+```powershell
+# ★ 关键：不设这个变量，emulator 会去 C:\Users\<用户>\.android 找 AVD 并新建到 C 盘
+$env:ANDROID_PREFS_ROOT = "E:\.android"
+
+# 确认能找到 AVD（应输出 Pixel_10_Pro）
+& "E:\android\Android\Sdk\emulator\emulator.exe" -list-avds
+
+# 启动
+Start-Process "E:\android\Android\Sdk\emulator\emulator.exe" `
+  -ArgumentList "-avd","Pixel_10_Pro","-no-snapshot-load","-no-boot-anim","-gpu","auto"
+
+# 等待引导完成（返回 1 即可）
+& "E:\android\Android\Sdk\platform-tools\adb.exe" -s emulator-5554 shell getprop sys.boot_completed
+
+# 安装并启动
+& "E:\android\Android\Sdk\platform-tools\adb.exe" -s emulator-5554 install -r app\build\outputs\apk\debug\app-debug.apk
+& "E:\android\Android\Sdk\platform-tools\adb.exe" -s emulator-5554 shell am start -n "com.example.mycoursedesign/.MainActivity"
+
+# 关闭
+& "E:\android\Android\Sdk\platform-tools\adb.exe" -s emulator-5554 emu kill
+```
+
+> **`ANDROID_USER_HOME` vs `ANDROID_PREFS_ROOT`**：Windows 版 emulator **只认后者**。
+> 用户级已设置 `ANDROID_USER_HOME=E:\.android`，但 emulator 不读它，
+> 因此每次启动前必须显式设 `ANDROID_PREFS_ROOT`。详见 `PROGRESS.md` "模拟器环境"。
 
 > **回答"Android Studio 里没有单独编译 core 的选项"**：AS 的 Build 菜单只提供
 > `Make Project` / `Make Module 'app'`。要看某个 library 模块的真实报错，
@@ -416,7 +499,7 @@ $env:JAVA_HOME="C:\Users\dashen\.jdks\ms-17.0.20.1"
 
 按顺序读，不要跳：
 
-1. `docs/PROJECT_PLAN.md`（本文档）—— 目标、架构、12 次提交规划
+1. `docs/PROJECT_PLAN.md`（本文档）—— 目标、架构、22 次提交规划
 2. `docs/PROGRESS.md` —— 当前进度快照，写明"上一次做到哪、下一步做什么"
 3. `git log --oneline --stat` —— 看真实提交历史，**以 Git 为准，不要相信口头描述**
 4. `core/src/main/java/` 与 `app/src/main/java/` —— 看实际代码
@@ -451,7 +534,7 @@ git status 确认真实进度，再继续开发。
 |---|---|---|
 | 工作区沙箱 ACL 失败 | 所有 shell 命令报 `SetNamedSecurityInfoW failed (Win32 5)` | 执行命令时申请完整权限（danger-full-access） |
 | 默认 JDK 是 24 | Gradle 8.2 有兼容风险 | 显式设 `JAVA_HOME` 指向 JDK 17 |
-| Gradle Wrapper 写死本机路径 | 别人 clone 后无法构建 | 提交 #12 改回官方 URL |
+| Gradle Wrapper 写死本机路径 | 别人 clone 后无法构建 | **不要改 URL**（实测会导致本机构建卡死），见第 6 节说明 |
 | `core` 无源码 | `:core:compileDebugKotlin NO-SOURCE`，app 报 `error.NonExistentClass` | 补齐 core 四件套（提交 #3） |
 | AS 模板残留 | `FirstFragment` 用 `FragmentFirstBinding` 但 viewBinding 已关 | 删除模板文件（提交 #2） |
 | 无 AVD / 无真机 | `adb devices` 为空 | 需在 AS 里创建模拟器，或真机开 USB 调试 |
@@ -460,4 +543,4 @@ git status 确认真实进度，再继续开发。
 
 1. **viewBinding 开还是不开**？（第 4.3 节路线 A / B）—— 需用户确认
 2. **`item_note.xml` 的 `CardView` 是否改用 `MaterialCardView`**？—— 建议改，可省一个依赖
-3. **`gradle-wrapper.properties` 的 URL 是否改回官方**？—— 建议改（提交 #12），否则作业在老师机器上构建失败
+3. **`gradle-wrapper.properties` 的 URL 是否改回官方**？—— ❌ **已实测否决**：改 URL 会使缓存哈希失效、触发重新下载，而 `services.gradle.org` 在本机被卡死，构建无限期挂起。**保持 file:// 现状**，详见第 6 节。

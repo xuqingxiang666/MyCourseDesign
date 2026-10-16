@@ -3,7 +3,7 @@
 > **每完成一个阶段，必须更新本文件并随代码一起提交。**
 > 下一个接手者请以本文件 + `git log` 为准判断进度。
 
-**最后更新**：2026-10-15
+**最后更新**：2026-10-16
 
 ---
 
@@ -15,28 +15,92 @@
 | **项目能否编译** | ✅ **`:app:assembleDebug` BUILD SUCCESSFUL** |
 | **APK 能否安装运行** | ✅ 已在模拟器实测，无崩溃 |
 | **笔记新增功能** | ✅ 已实测，数据真实落库 |
-| 有效提交次数 | **2 / 12**（要求 ≥10） |
-| 模拟器 | ✅ `MyCourseDesign_API37`（Android 17 / API 37.2 / 16KB 页大小） |
+| 有效提交次数 | **2 / 22**（要求 ≥10） |
+| 模拟器 | ✅ **`Pixel_10_Pro`（E 盘）** —— 见下方"模拟器环境"一节 |
+
+---
+
+## 模拟器环境（★ 重要，避免重复踩坑）
+
+**统一使用 E 盘的 `Pixel_10_Pro`，不要新建 AVD 到 C 盘。**
+
+| 项 | 值 |
+|---|---|
+| AVD 名称 | `Pixel_10_Pro` |
+| AVD 路径 | `E:\.android\avd\Pixel_10_Pro.avd` |
+| 系统镜像 | `android-37.2\google_apis_playstore_ps16k\x86_64`（16KB 页大小） |
+| 硬件 | 4 核 / **4096 MB 内存** / 1280×2856 / 数据分区 10G |
+| 启动方式 | `-gpu auto`（**不要用 swiftshader_indirect**） |
+
+### ★ 必须显式设置的环境变量
+
+emulator 在 Windows 上**不认 `ANDROID_USER_HOME`**，只认 `ANDROID_PREFS_ROOT`。
+本项目曾因此把 AVD 误建到 C 盘（多占 5.4 GB），已删除并改用 E 盘。
+
+```powershell
+# 启动模拟器前必须执行这一行，否则 emulator 找不到 E 盘的 AVD
+$env:ANDROID_PREFS_ROOT = "E:\.android"
+
+# 完整启动命令
+Start-Process "E:\android\Android\Sdk\emulator\emulator.exe" `
+  -ArgumentList "-avd","Pixel_10_Pro","-no-snapshot-load","-no-boot-anim","-gpu","auto"
+```
+
+| 环境变量 | emulator 是否识别 | 说明 |
+|---|---|---|
+| `ANDROID_USER_HOME` | ❌ **不识别** | 用户已在用户级设置，但对 emulator 无效 |
+| `ANDROID_PREFS_ROOT` | ✅ **识别** | **本项目统一使用这个** |
+| `ANDROID_AVD_HOME` | ✅ 识别 | 也可用，但本项目不用 |
+| `ANDROID_SDK_HOME` | ❌ 不识别 | — |
+
+### 验证方法
+
+```powershell
+$env:ANDROID_PREFS_ROOT = "E:\.android"
+& "E:\android\Android\Sdk\emulator\emulator.exe" -list-avds   # 应输出 Pixel_10_Pro
+```
+
+### 排查经验
+
+- **截图全黑不代表 App 崩溃**：先用 `adb shell dumpsys activity activities | Select-String topResumedActivity`
+  确认 Activity 在前台，再等 5~10 秒重新截图。启动动画阶段截图会得到黑图。
+  更可靠的判据是日志里的 `Displayed <包名>/.MainActivity for user 0: +1s176ms`。
+- 模拟器自身服务（如 `android.hardware.uwb-service`）会持续刷 `FATAL signal 6`，
+  **与本项目无关**，不要被误导。
 
 ---
 
 ## 提交进度对照
 
+> 完整规划见 `PROJECT_PLAN.md` 第 3 节，共 22 次提交。
+> 原则：**先加声明、再加实现、最后动 UI**，保证每次提交都能独立编译。
+
 | # | 提交 | 状态 |
 |---|---|---|
 | 1 | `feat: 初始化Android课设项目` | ✅ `de0231a` |
-| 2+3 | `feat: 补齐core数据层并修复编译错误` | ✅ **本次提交**（原计划的 #2、#3 已合并，原因见下） |
-| 4 | `feat(app): 补全笔记增删改查与DiffUtil刷新` | ⬜ 待做 |
-| 5 | `feat(app): 新增归档置顶与暗色主题` | ⬜ 待做 |
-| 6 | `feat(app): Markdown实时预览与草稿自动保存` | ⬜ 待做 |
-| 7 | `feat(core): 笔记加密与生物识别解锁` | ⬜ 待做 |
-| 8 | `feat(core): 基于lastModified的LWW冲突解决机制` | ⬜ 待做 |
-| 9 | `feat(sharecard): 分享卡片生成/CSV导出/FileProvider分享` | ⬜ 待做 |
-| 10 | `test: 补充单元测试并将覆盖率提升至60%以上` | ⬜ 待做 |
-| 11 | `docs: 添加README与架构说明` | ⬜ 待做 |
-| 12 | `chore: 修复Gradle Wrapper跨机器可用性并完善gitignore` | ⬜ 待做 |
+| 2 | `feat: 补齐core数据层并修复编译错误，实现笔记新增功能` | ✅ `20fa3c1` |
+| 3 | `refactor(core): 引入NoteRepository抽象，隔离UI与DAO` | ⬜ 下一步 |
+| 4 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ⬜ |
+| 5 | `feat(app): 新增编辑与删除笔记功能` | ⬜ |
+| 6 | `feat(app): 新增笔记置顶与归档功能` | ⬜ |
+| 7 | `feat(app): 适配暗色主题并完善列表视觉` | ⬜ |
+| 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ⬜ |
+| 9 | `feat(core): 实现笔记加密与密钥管理` | ⬜ |
+| 10 | `feat(app): 接入生物识别解锁与加密笔记界面` | ⬜ |
+| 11 | `feat(app): 实现Markdown渲染器` | ⬜ |
+| 12 | `feat(app): 接入Markdown实时预览与草稿自动保存` | ⬜ |
+| 13 | `feat(core): 实现基于lastModified的LWW冲突解决机制` | ⬜ |
+| 14 | `feat(sharecard): 定义P4插件对外契约与入口` | ⬜ |
+| 15 | `feat(sharecard): 实现分享卡片Bitmap绘制` | ⬜ |
+| 16 | `feat(sharecard): 实现FileProvider分享到其他App` | ⬜ |
+| 17 | `feat(sharecard): 实现CSV导出(UTF-8 BOM防乱码)` | ⬜ |
+| 18 | `feat(app): 主App接入P4插件入口` | ⬜ |
+| 19 | `test(core): 补充数据层与领域逻辑单元测试` | ⬜ |
+| 20 | `test(app): 补充UI层单元测试并将覆盖率提升至60%` | ⬜ |
+| 21 | `docs: 添加README与架构说明` | ⬜ |
+| 22 | `chore: 完善gitignore与gitattributes，规范仓库卫生` | ⬜ |
 
-### 为什么 #2 和 #3 合并成了一次提交
+### 为什么 #2 是两次提交合并而来
 
 原计划把"清理AS模板"和"实现core数据层"分成两次提交。实际执行时发现二者**强耦合**：
 
@@ -46,7 +110,7 @@
   会编译失败（`StateFlow` 没有 `observe()` 方法），必须一并改成 `repeatOnLifecycle`。
 
 如果强行拆成两次，中间那次提交是**编译不过**的，违反"每次提交都必须可编译"的原则。
-因此合并为一次语义完整的提交。
+**这是唯一一次合并**，后续按 22 次规划逐步推进，不再合并。
 
 ---
 
@@ -114,22 +178,37 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 | ADB 点击对话框坐标漂移 | 键盘弹出后对话框上移 410px，按旧坐标点击无效 | 每次点击前重新 `uiautomator dump` 取实时坐标 |
 | PowerShell 重定向破坏二进制 | `adb shell ... cat > file` 导出的 .db 无法打开 | 用 `adb exec-out` 配合 `cmd /c` 重定向 |
 | AS 模板残留 | 模板 Fragment 与 viewBinding 设置冲突 | 已删除（见上） |
-| Gradle Wrapper 写死本机路径 | 别人 clone 后无法构建 | 提交 #12 改回官方 URL |
+| **改 Gradle Wrapper URL 会让构建卡死** | 改回官方 HTTPS 后 `gradlew` 无限期挂起 | **不要改 URL**。Gradle 用 URL 的哈希定位缓存目录，改 URL = 缓存失效 = 重新下载，而 `services.gradle.org` 在本机被卡死。已实测复现并回滚 |
+| `Set-Content -Encoding UTF8` 会写入 BOM | Java 读 properties 文件可能出错 | 用 `[System.IO.File]::WriteAllText($p,$s,(New-Object System.Text.UTF8Encoding $false))` |
+| 截图全黑≠崩溃 | 启动动画阶段截图得到全黑图 | 等 5~10 秒重截，或用日志 `Displayed <包名>/.MainActivity` 判定 |
 
 ---
 
 ## 下一步（给接手者）
 
-**提交 #4：补全笔记增删改查**
+**提交 #3：`refactor(core): 引入NoteRepository抽象，隔离UI与DAO`**
 
-1. 在 `core` 增加 `data/repository/NoteRepository.kt` + `NoteRepositoryImpl.kt`，
-   用 Hilt 绑定接口（Clean Architecture 要求 UI 不直接依赖 DAO）
-2. `NoteViewModel` 改为依赖 `NoteRepository`，并补上 `setPinned` / `setArchived` / `deleteNote`
-3. `MainActivity` 增加长按菜单（置顶 / 归档 / 删除，删除带确认对话框）
-4. 点击笔记进入编辑界面（`NoteEditorActivity` 或 Fragment）
-5. 编译 + 模拟器实测 + 更新本文件 + 提交
+本步是**纯新增**，不改动任何现有代码行为，因此一定能单独编译通过：
 
-**待用户确认的决策**（原 3 项已全部确认）：
+1. 新建 `core/data/repository/NoteRepository.kt`（接口），转发 `NoteDao` 的全部方法
+2. 新建 `core/data/repository/NoteRepositoryImpl.kt`，
+   用 `@Inject constructor(private val noteDao: NoteDao)` 实现接口
+3. 新建 `core/di/RepositoryModule.kt`，
+   用 `@Binds` 把 `NoteRepositoryImpl` 绑定到 `NoteRepository`
+4. 编译验证 → 更新本文件 → 提交
+
+**后续步骤（详见 `PROJECT_PLAN.md` 第 3 节）**：
+#4 ViewModel 改依赖 Repository → #5 编辑/删除 → #6 置顶/归档 → #7 暗色主题
+→ #8~#10 加密与生物识别 → #11~#12 Markdown 与自动保存 → #13 冲突解决
+→ #14~#18 P4 插件 → #19~#20 单元测试 → #21 README → #22 仓库收尾
+
+**已确认的决策**：
 1. ~~viewBinding~~ → ✅ 已确认开启（路线 B）
 2. ~~MaterialCardView~~ → ✅ 已确认改用
-3. ~~gradle-wrapper URL~~ → ✅ 已确认改，放在提交 #12
+3. ~~gradle-wrapper URL~~ → ❌ **已实测否决**，保持 file:// 现状（改 URL 会让本机构建卡死，详见 `PROJECT_PLAN.md` 第 6 节）
+4. ~~模拟器位置~~ → ✅ 统一使用 E 盘 `Pixel_10_Pro`，C 盘 AVD 已删除（释放 5.2 GB）
+
+**提交纪律（用户明确要求）**：
+- 课设要求 ≥10 次有效提交，**不要把多个步骤合并成一次提交**
+- 每次提交前必须 `:app:assembleDebug` 编译通过
+- 推送失败时**重试一次即可** —— DevSidecar 边车会自动切换到可用 IP
