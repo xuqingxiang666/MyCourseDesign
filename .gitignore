@@ -35,18 +35,15 @@ proguard/
 # Android Studio captures folder
 captures/
 
-# IntelliJ
+# IntelliJ / Android Studio
+# 说明：.idea/ 下绝大多数是 IDE 私有配置，不同机器上内容不同（例如 misc.xml 会记录本机 JDK 路径），
+# 提交到仓库只会造成无意义的 diff 与冲突，因此整体忽略。
+# 若将来确实要共享某项配置（如 codeStyles），再用 !.idea/xxx.xml 单独放行。
+.idea/
 *.iml
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/assetWizardSettings.xml
-.idea/dictionaries
-.idea/libraries
-.idea/caches
-.idea/modules.xml
-.idea/navEditor.xml
-.idea/compiler.xml
+
+# Kotlin 编译缓存
+.kotlin/
 
 # Keystore files
 *.jks
