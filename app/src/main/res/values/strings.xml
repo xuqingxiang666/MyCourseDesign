@@ -1,4 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MyCourseDesign</string>
+
+    <!-- ==================== 通用 ==================== -->
+    <string name="action_save">保存</string>
+    <string name="action_delete">删除</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_close">关闭</string>
+
+    <!-- ==================== 笔记列表 ==================== -->
+    <string name="note_untitled">无标题</string>
+    <string name="note_no_content">无内容</string>
+    <string name="note_pinned_badge">★ 已置顶</string>
+    <string name="note_archived_badge">已归档</string>
+    <string name="note_options_title">笔记操作</string>
+
+    <!-- ==================== 删除确认 ==================== -->
+    <string name="delete_dialog_title">删除笔记</string>
+    <string name="delete_dialog_message">确定删除「%1$s」吗？\n\n此操作不可恢复。</string>
+
+    <!-- ==================== 笔记编辑器 ==================== -->
+    <string name="editor_title_new">新建笔记</string>
+    <string name="editor_title_edit">编辑笔记</string>
+    <string name="editor_hint_title">标题</string>
+    <string name="editor_hint_content">开始输入内容…</string>
+    <string name="toast_saved">已保存</string>
+    <string name="toast_empty_note">标题和内容都为空，未保存</string>
 </resources>

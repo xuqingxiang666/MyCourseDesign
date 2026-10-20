@@ -23,6 +23,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          笔记编辑器。
+
+          android:exported="false"
+            只允许本应用内部启动。编辑页不需要被外部 App 调用，
+            设为 true 会带来安全隐患（任意 App 都能拉起并传入 noteId）。
+
+          android:parentActivityName=".MainActivity"
+            声明逻辑父界面。这样系统返回栈的行为更正确，
+            也为将来接入"向上导航"(Up button) 打好基础。
+
+          android:windowSoftInputMode="adjustResize"
+            ★ 关键：键盘弹出时把窗口"缩小"而不是"整体上推"。
+            配合布局里正文区的 layout_height="0dp"，
+            编辑区会自动压缩到键盘上方，用户能边看边写。
+            如果设成 adjustPan，整个界面会被推上去，标题栏会跑出屏幕。
+        -->
+        <activity
+            android:name=".NoteEditorActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.MyCourseDesign"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

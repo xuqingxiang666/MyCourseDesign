@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  整页笔记编辑器布局。
+
+  【设计目标：像 Word / 备忘录一样"一大块白纸"】
+  关键点全在下面两个 EditText 的属性上，逐条解释：
+
+  1. android:background="@null"
+     去掉 EditText 默认的下划线/边框，视觉上只剩一块干净的书写区域。
+
+  2. android:gravity="top|start"（正文区）
+     EditText 默认是垂直居中的，不设这个属性的话，内容少了会浮在屏幕中间，
+     看起来很奇怪。设成 top 才能从顶部开始写。
+
+  3. android:inputType="textMultiLine"
+     ★ 这是"多行"的关键。不设它（或设成 text）时，EditText 是单行的，
+     输入过长会横向滚动而不是换行 —— 也就是之前对话框里的那个问题。
+
+  4. android:layout_height="0dp" + 上下约束（正文区）
+     ConstraintLayout 里 0dp 表示"填满约束范围"。这样正文区会自动占满
+     标题下方到屏幕底部的所有空间，键盘弹出时（adjustResize）也会自动缩小。
+
+  5. android:scrollbars="vertical"
+     内容超出屏幕时可以上下滚动，否则会顶出去看不见。
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <!-- 顶部工具栏：左侧关闭按钮，右侧「保存」菜单项（在代码里 inflate） -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorSurface"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationContentDescription="@string/action_close"
+        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
+        app:title="@string/editor_title_new" />
+
+    <!-- 标题输入：大字号、单行，看起来像文档的标题栏 -->
+    <EditText
+        android:id="@+id/etTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:hint="@string/editor_hint_title"
+        android:imeOptions="actionNext"
+        android:importantForAutofill="no"
+        android:inputType="textCapSentences"
+        android:maxLines="1"
+        android:paddingStart="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="16dp"
+        android:textColor="?attr/colorOnSurface"
+        android:textColorHint="?attr/colorOnSurfaceVariant"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        tools:ignore="LabelFor" />
+
+    <!-- 标题与正文之间的分隔线 -->
+    <View
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:background="?attr/colorOutlineVariant"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/etTitle" />
+
+    <!-- 正文输入：铺满剩余空间，从左上角开始书写，多行自动换行 -->
+    <EditText
+        android:id="@+id/etContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@null"
+        android:gravity="top|start"
+        android:hint="@string/editor_hint_content"
+        android:importantForAutofill="no"
+        android:inputType="textMultiLine|textCapSentences"
+        android:padding="20dp"
+        android:scrollbars="vertical"
+        android:textColor="?attr/colorOnSurface"
+        android:textColorHint="?attr/colorOnSurfaceVariant"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider"
+        tools:ignore="LabelFor" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

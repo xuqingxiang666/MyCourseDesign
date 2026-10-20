@@ -1,19 +1,19 @@
 package com.example.mycoursedesign
 
 import android.os.Bundle
-import android.widget.EditText
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.core.data.entity.Note
 import com.example.mycoursedesign.databinding.ActivityMainBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 /**
- * 应用主界面：展示笔记列表，并提供新增入口。
+ * 应用主界面：展示笔记列表，提供新建入口，并支持点击编辑、长按操作。
  *
  * 【Java 思维对照】
  * - `@AndroidEntryPoint`：告诉 Hilt 这个 Activity 需要参与依赖注入，
@@ -52,17 +52,74 @@ class MainActivity : AppCompatActivity() {
         observeNotes()
     }
 
-    /** 初始化列表。 */
+    /**
+     * 初始化列表。
+     *
+     * 点击 → 打开编辑器编辑这条笔记；
+     * 长按 → 弹出操作菜单（目前只有删除，后续会加置顶/归档）。
+     */
     private fun setupRecyclerView() {
-        adapter = NoteAdapter { note ->
-            // TODO(阶段3-提交#4)：点击进入编辑界面
-        }
+        adapter = NoteAdapter(
+            onItemClick = { note -> openEditor(note.id) },
+            onItemLongClick = { note -> showNoteOptions(note) }
+        )
         binding.recyclerView.adapter = adapter
     }
 
-    /** 悬浮按钮：弹出新建笔记对话框。 */
+    /** 悬浮按钮：新建一条笔记。 */
     private fun setupFab() {
-        binding.fabAdd.setOnClickListener { showAddNoteDialog() }
+        binding.fabAdd.setOnClickListener {
+            openEditor(NoteEditorActivity.NEW_NOTE_ID)
+        }
+    }
+
+    /**
+     * 打开发编辑器界面。
+     *
+     * @param noteId 要编辑的笔记 id；传 [NoteEditorActivity.NEW_NOTE_ID] 表示新建。
+     */
+    private fun openEditor(noteId: Long) {
+        startActivity(NoteEditorActivity.newIntent(this, noteId))
+    }
+
+    /**
+     * 长按笔记弹出的操作菜单。
+     *
+     * 【为什么用数组 + when(which) 而不是写死一个"删除"按钮】
+     * 后续要给菜单加"置顶""归档"，只需要往数组里加一项、往 when 里加个分支，
+     * 扩展成本几乎为零。这是为了避免下次改动时重写整个方法。
+     */
+    private fun showNoteOptions(note: Note) {
+        val options = arrayOf(getString(R.string.action_delete))
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(note.title.ifBlank { getString(R.string.note_untitled) })
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> confirmDelete(note)
+                }
+            }
+            .show()
+    }
+
+    /**
+     * 删除确认对话框。
+     *
+     * 删除是"不可恢复"操作，必须二次确认，否则手滑长按就把笔记弄丢了。
+     * 确认后调用 ViewModel 删除，列表通过 [observeNotes] 的 Flow 自动刷新，
+     * 无需手动通知适配器。
+     */
+    private fun confirmDelete(note: Note) {
+        val displayTitle = note.title.ifBlank { getString(R.string.note_untitled) }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.delete_dialog_title)
+            .setMessage(getString(R.string.delete_dialog_message, displayTitle))
+            .setPositiveButton(R.string.action_delete) { _, _ ->
+                viewModel.deleteNote(note)
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
     }
 
     /**
@@ -95,34 +152,5 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-    }
-
-    /** 弹出对话框，输入标题与正文后保存新笔记。 */
-    private fun showAddNoteDialog() {
-        // 用代码动态构建输入布局，避免为一个小对话框单独建 XML 文件。
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(56, 40, 56, 20)
-        }
-
-        val etTitle = EditText(this).apply { hint = "请输入标题" }
-        val etContent = EditText(this).apply { hint = "请输入内容" }
-
-        container.addView(etTitle)
-        container.addView(etContent)
-
-        AlertDialog.Builder(this)
-            .setTitle("新建笔记")
-            .setView(container)
-            .setPositiveButton("保存") { _, _ ->
-                val title = etTitle.text.toString().trim()
-                val content = etContent.text.toString().trim()
-                // 标题和内容全为空时不保存，避免产生空记录。
-                if (title.isNotEmpty() || content.isNotEmpty()) {
-                    viewModel.addNote(title, content)
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
     }
 }

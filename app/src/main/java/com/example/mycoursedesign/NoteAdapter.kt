@@ -1,7 +1,6 @@
 package com.example.mycoursedesign
 
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -30,7 +29,10 @@ import com.example.mycoursedesign.databinding.ItemNoteBinding
  * "哪份数据更新"是同一类问题：**都要有一套确定性的比较规则**。
  */
 class NoteAdapter(
-    private val onItemClick: (Note) -> Unit
+    /** 点击条目：进入编辑界面。 */
+    private val onItemClick: (Note) -> Unit,
+    /** 长按条目：弹出操作菜单（删除等）。 */
+    private val onItemLongClick: (Note) -> Unit
 ) : ListAdapter<Note, NoteAdapter.NoteViewHolder>(DIFF) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
@@ -43,7 +45,7 @@ class NoteAdapter(
     }
 
     override fun onBindViewHolder(holder: NoteViewHolder, position: Int) {
-        holder.bind(getItem(position), onItemClick)
+        holder.bind(getItem(position), onItemClick, onItemLongClick)
     }
 
     /**
@@ -57,20 +59,39 @@ class NoteAdapter(
         private val binding: ItemNoteBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(note: Note, onItemClick: (Note) -> Unit) {
-            binding.tvTitle.text = note.title.ifBlank { "无标题" }
-            binding.tvContent.text = note.content.ifBlank { "无内容" }
+        fun bind(
+            note: Note,
+            onItemClick: (Note) -> Unit,
+            onItemLongClick: (Note) -> Unit
+        ) {
+            val context = binding.root.context
+
+            // 标题/内容为空时显示占位文字，避免卡片看起来是空白的
+            binding.tvTitle.text = note.title.ifBlank { context.getString(R.string.note_untitled) }
+            binding.tvContent.text =
+                note.content.ifBlank { context.getString(R.string.note_no_content) }
 
             // 状态徽章：置顶优先显示，其次显示归档。
             val badge = when {
-                note.isPinned -> "★ 已置顶"
-                note.isArchived -> "已归档"
+                note.isPinned -> context.getString(R.string.note_pinned_badge)
+                note.isArchived -> context.getString(R.string.note_archived_badge)
                 else -> null
             }
             binding.tvBadge.text = badge.orEmpty()
-            binding.tvBadge.visibility = if (badge == null) View.GONE else View.VISIBLE
+            binding.tvBadge.visibility = if (badge == null) {
+                android.view.View.GONE
+            } else {
+                android.view.View.VISIBLE
+            }
 
             binding.root.setOnClickListener { onItemClick(note) }
+
+            // 长按弹出操作菜单。
+            // 返回 true 表示"事件已消费"，这样长按不会同时触发单击。
+            binding.root.setOnLongClickListener {
+                onItemLongClick(note)
+                true
+            }
         }
     }
 
