@@ -51,10 +51,10 @@
 |---|---|---|---|---|
 | 1 | 环境 | `feat: 初始化Android课设项目` | ✅ | ✅ `de0231a` |
 | 2 | 阶段1+2 | `feat: 补齐core数据层并修复编译错误，实现笔记新增功能` | ✅ | ✅ `20fa3c1` |
-| 3 | 阶段3 | `refactor(core): 引入NoteRepository抽象，隔离UI与DAO` | ✅ 纯新增，无行为变化 | ⬜ |
-| 4 | 阶段3 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ DAO 方法全量委托 | ⬜ |
-| 5 | 阶段3 | `feat(app): 新增编辑与删除笔记功能` | ✅ | ⬜ |
-| 6 | 阶段3 | `feat(app): 新增笔记置顶与归档功能` | ✅ | ⬜ |
+| 3 | 阶段3 | `refactor(core): 引入NoteRepository抽象，隔离UI与DAO` | ✅ 纯新增，无行为变化 | ✅ `38eae52` |
+| 4 | 阶段3 | `feat(app): 整页笔记编辑器与长按删除` | ✅ | ✅ 已完成，**待提交** |
+| 5 | 阶段3 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ DAO 方法全量委托 | ✅ 已完成，**待提交** |
+| 6 | 阶段3 | `feat(app): 新增笔记置顶与归档功能` | ✅ | ⬜ 下一步 |
 | 7 | 阶段3 | `feat(app): 适配暗色主题并完善列表视觉` | ✅ | ⬜ |
 | 8 | 阶段5 | `feat(core): Note实体新增加密相关字段与DAO支持` | ✅ 纯加字段 | ⬜ |
 | 9 | 阶段5 | `feat(core): 实现笔记加密与密钥管理` | ✅ | ⬜ |
@@ -70,10 +70,15 @@
 | 19 | 阶段6 | `test(core): 补充数据层与领域逻辑单元测试` | ✅ | ⬜ |
 | 20 | 阶段6 | `test(app): 补充UI层单元测试并将覆盖率提升至60%` | ✅ | ⬜ |
 | 21 | 阶段6 | `docs: 添加README与架构说明` | ✅ | ⬜ |
-| 22 | 阶段6 | `chore: 完善gitignore与gitattributes，规范仓库卫生` | ✅ | ⬜ |
+| 22 | 阶段6 | `chore: 完善gitignore与gitattributes，规范仓库卫生` | ✅ | ✅ 已提前完成 `c08dc43` |
 
-> **注意**：#2 由原计划的两次提交合并而来（原因见 `PROGRESS.md`）。
-> 合并后仍有 22 次提交，相对 ≥10 次的要求有充足余量。
+> **注意 1**：#2 由原计划的两次提交合并而来（原因见 `PROGRESS.md`）。
+> 合并后仍有充沛余量，相对 ≥10 次的要求完全够用。
+>
+> **注意 2（顺序调整）**：原计划是先做 `NoteViewModel` 重构（#4）再做编辑/删除（#5），
+> 实际调整为**先做整页编辑器与删除**。原因：编辑器是纯新增 UI，不依赖 Repository
+> 重构也能独立编译；而且用户能立刻感知输入体验提升（从单行输入框变成整页编辑器）。
+> ViewModel 重构顺延为 #5，不影响后续任何步骤。
 >
 > **关于"有效提交"的判断标准**：每次提交都有明确的、可独立描述的功能增量，
 > 且能编译通过。不使用"格式化代码"、"修个错别字"这类无意义提交充数。
@@ -301,6 +306,71 @@ class NoteAdapter(private val onClick: (Note) -> Unit) :
 
 **这与"冲突解决机制"是同一个考点**：`DiffUtil` 判断"哪些条目变了"靠的是 `id` 稳定 + 内容比较，
 和 LWW 判断"哪份数据更新"靠的是时间戳 + 版本号，思路一脉相承。写报告时可以这样串起来讲。
+
+**✅ 已实现**：`NoteAdapter` 已是 `ListAdapter` + `DiffUtil`，并新增了长按回调
+`onItemLongClick`，用于弹出删除菜单。
+
+#### 4.3.1 笔记编辑器（已实现）
+
+**已落地的包结构**（`app` 模块当前实际结构）：
+
+```
+app/src/main/java/com/example/mycoursedesign/
+├── MyApplication.kt            # @HiltAndroidApp
+├── MainActivity.kt             # 列表页：新建入口、点击编辑、长按删除
+├── NoteAdapter.kt              # ListAdapter + DiffUtil + 点击/长按回调
+├── NoteViewModel.kt            # 列表 ViewModel（⚠️ 仍直接注入 NoteDao，待迁移）
+├── NoteEditorActivity.kt       # ★ 整页编辑器
+└── NoteEditorViewModel.kt      # ★ 编辑器 ViewModel（已使用 NoteRepository）
+```
+
+**为什么用独立的 Activity 而不是 Fragment**
+
+| 方案 | 优点 | 缺点 | 结论 |
+|---|---|---|---|
+| 独立 Activity | 返回栈天然正确；`adjustResize` 行为简单；全屏编辑不受列表布局干扰 | 两个 Activity 间靠 Intent 传参 | ✅ **采用** |
+| Fragment（单 Activity） | 切换动画灵活 | 需要 Navigation 组件 + 返回栈手动管理，键盘处理更麻烦 | ❌ 不采用 |
+
+**两种模式的参数传递**
+
+```kotlin
+// 调用方：新建
+startActivity(NoteEditorActivity.newIntent(this, NoteEditorActivity.NEW_NOTE_ID))
+// 调用方：编辑
+startActivity(NoteEditorActivity.newIntent(this, note.id))
+```
+
+`noteId` 通过 Intent extra 传入，`NoteEditorViewModel` 用 `SavedStateHandle`
+直接读出来，**Activity 不需要手动往 ViewModel 传参**。
+
+**多行输入的关键属性**（这是从"单行输入框"升级到"整页编辑器"的核心）
+
+| 属性 | 值 | 作用 |
+|---|---|---|
+| `inputType` | `textMultiLine` | ★ 不设它就会横向滚动而不换行 |
+| `gravity` | `top\|start` | 默认垂直居中，不设的话内容少时浮在屏幕中间 |
+| `background` | `@null` | 去掉输入框边框，看起来像一张白纸 |
+| `layout_height` | `0dp` + 上下约束 | 填满标题下方到屏幕底部的全部空间 |
+| `scrollbars` | `vertical` | 长内容可滚动 |
+| `windowSoftInputMode` | `adjustResize`（Manifest） | 键盘弹出时压缩窗口而非推走界面 |
+
+#### 4.3.2 删除功能的完整链路（已实现）
+
+```
+长按卡片
+  → NoteAdapter.onItemLongClick
+  → MainActivity.showNoteOptions()      弹出菜单（数组 + when，便于后续加"置顶/归档"）
+  → 选「删除」
+  → MainActivity.confirmDelete()        二次确认，防手滑
+  → NoteViewModel.deleteNote(note)
+  → NoteDao.deleteNote()
+  → Room 删除记录
+  → getActiveNotes() 的 Flow 自动发射新列表
+  → ListAdapter + DiffUtil 自动播放删除动画
+```
+
+**注意最后两步：删除后不需要手动通知列表刷新**，Flow 会自动推送新数据。
+这是 Room + Flow + DiffUtil 组合的核心优势，答辩时可以重点强调。
 
 ### 4.4 `feature_sharecard` 模块设计 —— P4 插件
 
@@ -541,6 +611,115 @@ git status 确认真实进度，再继续开发。
 
 ### 8.5 当前已知的待决问题
 
-1. **viewBinding 开还是不开**？（第 4.3 节路线 A / B）—— 需用户确认
-2. **`item_note.xml` 的 `CardView` 是否改用 `MaterialCardView`**？—— 建议改，可省一个依赖
+1. **viewBinding 开还是不开**？—— ✅ 已确认开启（路线 B），已在提交 `20fa3c1` 落地
+2. **`item_note.xml` 的 `CardView` 是否改用 `MaterialCardView`**？—— ✅ 已确认改用，省掉一个依赖
 3. **`gradle-wrapper.properties` 的 URL 是否改回官方**？—— ❌ **已实测否决**：改 URL 会使缓存哈希失效、触发重新下载，而 `services.gradle.org` 在本机被卡死，构建无限期挂起。**保持 file:// 现状**，详见第 6 节。
+4. **模拟器中文输入**？—— ⚠️ 待解决，见第 9 节说明
+
+---
+
+## 9. 压力测试计划（项目功能完成后执行）
+
+> **触发条件**：主功能（增删改查、Markdown、加密、P4 分享）全部完成后执行。
+> **目的**：验证"真实场景可用"，而不是"点两下能跑"。
+> **原则**：轻量、可重复、有量化指标，**不追求压测工具的重型方案**。
+
+### 9.1 数据量压力（验证列表性能）
+
+| 用例 | 方法 | 通过标准 |
+|---|---|---|
+| 批量插入 | 写一个临时 `@Test` 或用 `adb shell` 循环插入 500 / 1000 条笔记 | App 启动不 ANR，列表滚动流畅 |
+| 长文本 | 单条笔记正文 10 万字符（约 100 KB） | 编辑器打开 < 2s，输入不卡顿 |
+| 超长标题 | 标题 500 字符 | 列表卡片正确截断显示，不撑破布局 |
+| 空数据 | 清空数据库后打开 | 显示空状态，不崩溃 |
+
+**量化方式**：`adb shell dumpsys gfxinfo com.example.mycoursedesign` 看帧率；
+`logcat` 里搜 `Skipped XXX frames` 判断卡顿。
+
+### 9.2 边界与异常输入
+
+| 用例 | 输入 | 通过标准 |
+|---|---|---|
+| 全空 | 标题空 + 内容空 → 保存 | 拒绝保存并提示 |
+| 仅空格 | 全空格 → 保存 | 应 trim 后视为空，拒绝保存 |
+| emoji / 特殊符号 | `😀🎉 <>&"'\n\t` | 正确显示与存储，不崩溃、不破坏 XML |
+| 极长单词 | 无空格连续 1000 字符 | 自动换行而非横向溢出 |
+| 快速连点保存 | 连续点保存按钮 10 次 | 不产生重复记录（或至少不崩溃） |
+
+### 9.3 生命周期与配置变更
+
+| 用例 | 方法 | 通过标准 |
+|---|---|---|
+| 旋转屏幕 | 编辑器内旋转 | 已输入内容不丢失 |
+| 后台杀进程 | 编辑中按 Home → `adb shell am kill` → 回来 | 不崩溃（数据可能丢，属预期，后续草稿功能解决） |
+| 深色模式切换 | 编辑中切暗色 | 文字保持可读，无黑底黑字 |
+| 字体缩放 | 设置里把字体调到最大 | 布局不错位、不重叠 |
+| 分屏 / 小窗 | 进入分屏模式 | 列表与编辑器均可用 |
+
+### 9.4 并发与数据一致性
+
+| 用例 | 方法 | 通过标准 |
+|---|---|---|
+| 快速增删 | 脚本连续 50 次"新建→删除" | 最终数据库行数正确，无残留 |
+| 编辑中删除 | 打开编辑页，用 adb 从数据库删掉该条，再点保存 | 不崩溃，给出合理提示 |
+| 版本号递增 | 连续编辑同一条 20 次 | `version` 最终为 21，`lastModified` 单调递增 |
+| LWW 冲突 | 构造两条同 id 不同 `lastModified` 的记录，跑冲突解决逻辑 | 时间戳大的胜出（功能完成后验证） |
+
+### 9.5 分享与导出（P4 完成后）
+
+| 用例 | 通过标准 |
+|---|---|
+| 导出 1000 条到 CSV | 文件完整，Excel 打开中文不乱码（BOM 生效） |
+| 超长笔记生成分享卡片 | 文字自动截断/省略，不溢出图片边界 |
+| 分享到其他 App | 微信/文件管理器能正常打开 |
+
+### 9.6 内存与稳定性
+
+| 用例 | 方法 | 通过标准 |
+|---|---|---|
+| 长时间滚动 | 1000 条笔记列表来回滚动 2 分钟 | 内存不持续增长（`adb shell dumpsys meminfo`） |
+| 反复进出编辑页 | 进出 30 次 | 无内存泄漏（`LeakCanary` 可选，或观察 meminfo） |
+| Monkey 测试（可选） | `adb shell monkey -p com.example.mycoursedesign -v 2000` | 无崩溃 |
+
+### 9.7 执行记录
+
+**每轮压测的结果必须记录在本节**，格式：
+
+```
+日期 | 用例编号 | 环境 | 结果 | 发现的问题 | 修复提交
+```
+
+---
+
+## 10. 关于模拟器中文输入（已知限制）
+
+**现象**：在模拟器里无法输入中文（手动敲键盘只能出英文）。
+
+**这是模拟器/输入法的问题，不是 App 的问题。证据**：
+
+- App 的界面文字全是中文（「新建笔记」「保存」「删除」），**渲染完全正常**
+- `strings.xml` 全部是 UTF-8 中文，构建与显示均无问题
+- 只是"输入"环节没有中文输入法可用
+
+**原因**：
+
+1. AVD 配置里 `hw.keyboard=yes`，直接使用**物理键盘**（主机键盘），
+   而物理键盘只发送 ASCII/英文字符，没有拼音输入法参与；
+2. 硬件键盘启用时，Android 通常**不弹出软键盘**，所以看不到 Gboard；
+3. 即使弹出，全新 AVD 的 Gboard 默认只装了 English (US) 布局，
+   需要手动添加中文（拼音）语言包。
+
+**解决方案（按推荐顺序）**：
+
+| 方案 | 做法 | 说明 |
+|---|---|---|
+| **A. 关闭硬件键盘 + 启用中文** | 把 AVD 的 `hw.keyboard` 改为 `no`，重启模拟器；然后在 设置 → 系统 → 语言和输入法 → 屏幕键盘 → Gboard → 语言 → 添加键盘 → 中文（拼音） | 最接近真实手机体验；需要能联网下载语言包 |
+| **B. 用 `adb` 注入中文** | 安装 ADBKeyboard 之类的辅助输入法，用 `adb shell am broadcast` 发送 Unicode 文本 | 适合自动化测试，但**不是真实用户输入路径** |
+| **C. 真机测试** | 用 USB 连接真实 Android 手机 | 最真实，且能验证指纹识别等模拟器不支持的硬件能力 |
+
+**重要**：App 本身对中文**完全支持**（数据库是 SQLite TEXT、Room 默认 UTF-8），
+不需要任何代码改动。这纯粹是测试环境的输入手段问题。
+
+**验证中文存储的正确方法**（不依赖输入法）：
+用 `adb exec-out` 导出数据库，用 Python/sqlite3 直接查询，确认中文内容正确落库。
+文档已多次使用该方法验证英文内容，同样适用于中文。

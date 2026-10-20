@@ -3,19 +3,23 @@
 > **每完成一个阶段，必须更新本文件并随代码一起提交。**
 > 下一个接手者请以本文件 + `git log` 为准判断进度。
 
-**最后更新**：2026-10-16
+**最后更新**：2026-10-20
 
 ---
 
-## 当前状态：项目已可编译、可运行、功能已实测通过
+## 当前状态：笔记增删改查完整可用（编辑器版本待提交）
 
 | 项 | 状态 |
 |---|---|
 | Android Studio Sync | ✅ 成功 |
 | **项目能否编译** | ✅ **`:app:assembleDebug` BUILD SUCCESSFUL** |
 | **APK 能否安装运行** | ✅ 已在模拟器实测，无崩溃 |
-| **笔记新增功能** | ✅ 已实测，数据真实落库 |
-| 有效提交次数 | **2 / 22**（要求 ≥10） |
+| **笔记新增** | ✅ 已实测，数据真实落库 |
+| **整页编辑器** | ✅ 已实测，多行输入/换行/预填全部正常 |
+| **笔记编辑** | ✅ 已实测，`version` 正确递增 |
+| **笔记删除** | ✅ 已实测，长按菜单 + 确认框 + 数据库记录清除 |
+| **Repository 抽象层** | ✅ **已全面生效**：列表与编辑器两个 ViewModel 都只依赖 `NoteRepository`，app 层已零 `NoteDao` 引用 |
+| 有效提交次数 | **5 次**（要求 ≥10）+ **2 次待提交**（编辑器+删除、ViewModel 重构，等用户确认） |
 | 模拟器 | ✅ **`Pixel_10_Pro`（E 盘）** —— 见下方"模拟器环境"一节 |
 
 ---
@@ -72,16 +76,31 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 
 ## 提交进度对照
 
-> 完整规划见 `PROJECT_PLAN.md` 第 3 节，共 22 次提交。
+> 完整规划见 `PROJECT_PLAN.md` 第 3 节。
 > 原则：**先加声明、再加实现、最后动 UI**，保证每次提交都能独立编译。
+
+### 已完成（按真实 Git 历史排序）
+
+| # | 提交信息 | Hash | 类型 |
+|---|---|---|---|
+| 1 | `feat: 初始化Android课设项目` | `de0231a` | 脚手架 |
+| 2 | `feat: 补齐core数据层并修复编译错误，实现笔记新增功能` | `20fa3c1` | **核心代码** |
+| 3 | `chore: 完善gitignore并规范仓库卫生，移除误提交的IDE私有文件` | `c08dc43` | 仓库卫生（原计划 #22，提前完成） |
+| 4 | `docs: 补充模拟器环境手册与实测记录` | `3764e8f` | 文档 |
+| 5 | `refactor(core): 引入NoteRepository抽象层，隔离UI与数据库实现` | `38eae52` | **核心代码** |
+| 6 | `feat(app): 整页笔记编辑器与长按删除` | **待提交** | **核心代码**（改动已在工作区，等用户确认后提交） |
+| 7 | `refactor(app): NoteViewModel改为依赖NoteRepository` | **待提交** | **核心代码**（纯机械替换，对外 API 不变） |
+
+> **编号说明**：原计划编号与真实提交顺序在 #3 之后出现了偏移，
+> 因为 #3、#4 是仓库卫生与文档类提交，它们提前占用了序号。
+> 上表以真实 Git 历史为准，下表的"待做"仍沿用 `PROJECT_PLAN.md` 的功能编号。
+
+### 待做（功能编号）
 
 | # | 提交 | 状态 |
 |---|---|---|
-| 1 | `feat: 初始化Android课设项目` | ✅ `de0231a` |
-| 2 | `feat: 补齐core数据层并修复编译错误，实现笔记新增功能` | ✅ `20fa3c1` |
-| 3 | `refactor(core): 引入NoteRepository抽象，隔离UI与DAO` | ⬜ 下一步 |
-| 4 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ⬜ |
-| 5 | `feat(app): 新增编辑与删除笔记功能` | ⬜ |
+| 4 | `feat(app): 整页笔记编辑器与长按删除` | ✅ **代码已完成，待提交** |
+| 5 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ **代码已完成，待提交** |
 | 6 | `feat(app): 新增笔记置顶与归档功能` | ⬜ |
 | 7 | `feat(app): 适配暗色主题并完善列表视觉` | ⬜ |
 | 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ⬜ |
@@ -98,7 +117,14 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 19 | `test(core): 补充数据层与领域逻辑单元测试` | ⬜ |
 | 20 | `test(app): 补充UI层单元测试并将覆盖率提升至60%` | ⬜ |
 | 21 | `docs: 添加README与架构说明` | ⬜ |
-| 22 | `chore: 完善gitignore与gitattributes，规范仓库卫生` | ⬜ |
+| 22 | `chore: 仓库卫生收尾` | ✅ 由第 3 次提交提前完成 |
+| — | **轻量压力测试**（功能全部完成后执行，详见 `PROJECT_PLAN.md` 第 9 节） | ⬜ **项目完成后做** |
+
+> **压力测试的范围**（用户明确要求"完全完成项目之后做轻量压力测试，保证真实场景使用"）：
+> 数据量（500/1000 条）、长文本、边界输入（空/空格/emoji/超长单词）、
+> 生命周期（旋转/后台/暗色/字体缩放）、并发一致性（快速增删、版本号递增）、
+> 分享导出（1000 条 CSV）、稳定性（长时间滚动、反复进出编辑页、Monkey）。
+> 每轮结果需按统一格式记录在 `PROJECT_PLAN.md` 第 9.7 节。
 
 ### 为什么 #2 是两次提交合并而来
 
@@ -114,9 +140,11 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 
 ---
 
-## 本次提交完成的工作
+## 已完成工作明细（按提交分节）
 
-### 新增：core 数据层（4 个文件）
+### 第 2 次提交 `20fa3c1`：core 数据层 + 修复编译 + 笔记新增
+
+**新增 core 数据层（4 个文件）**
 
 | 文件 | 作用 |
 |---|---|
@@ -128,7 +156,7 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 配套：`core/build.gradle.kts` 增加 `room.schemaLocation`，
 schema 已导出到 `core/schemas/com.example.core.data.NoteDatabase/1.json`（已提交）。
 
-### 修改：app 模块
+**修改 app 模块**
 
 | 文件 | 改动 |
 |---|---|
@@ -138,7 +166,7 @@ schema 已导出到 `core/schemas/com.example.core.data.NoteDatabase/1.json`（�
 | `item_note.xml` | `CardView` → `MaterialCardView`（省一个依赖）；硬编码颜色改为主题属性；增加 `tvBadge` |
 | `strings.xml` | 移除 AS 模板字符串 |
 
-### 删除：AS 导航模板残留（11 个文件 + 5 个空目录）
+**删除 AS 导航模板残留（11 个文件 + 5 个空目录）**
 
 ```
 FirstFragment.kt / SecondFragment.kt
@@ -150,9 +178,174 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 > 这些是 Android Studio "Basic Views Activity" 模板自带的示例代码，
 > 与笔记 App 无关，且会因 `viewBinding` 开关状态直接导致编译失败。
 
+**修复的两个隐藏 Bug**
+
+1. **`StateFlow` 没有 `observe()` 方法**。原 `MainActivity` 写的是
+   `viewModel.activeNotes.observe(this) { ... }`（LiveData 的 API），
+   编译报 `Unresolved reference: observe`。改为 `repeatOnLifecycle(STARTED) + collect`。
+2. **`error.NonExistentClass` 的真正根因**不是 Hilt 配置，而是 `core` 模块
+   **完全没有 Kotlin 源码**：`NoteViewModel` 引用的 `Note` / `NoteDao` 从未被创建，
+   导致 `:core:compileDebugKotlin` 输出 `NO-SOURCE`。
+
+### 第 3 次提交 `c08dc43`：仓库卫生
+
+- `.gitignore` 改用 `.idea/` 整体忽略（原来只列举了部分文件，遗漏
+  `misc.xml` / `migrations.xml` 等，其中 `misc.xml` 会记录本机 JDK 路径）
+- 从版本控制移除 7 个误提交的 IDE 私有文件（本地文件保留，只是不再被跟踪）
+- 新增 `.gitattributes`：统一行尾 LF，消除刷屏警告，保证 `gradlew` 在 Linux 可执行
+- `gradle-wrapper.properties` 补上末尾换行
+- **`distributionUrl` 保持不变**（改回官方 URL 会导致构建卡死，已实测复现，详见 `PROJECT_PLAN.md` 第 6 节）
+
+### 第 4 次提交 `3764e8f`：文档与实测记录
+
+- `PROJECT_PLAN.md`：提交规划 12 次 → 22 次；新增 `distributionUrl` 专项说明；
+  第 7 节补模拟器完整操作命令
+- `PROGRESS.md`：新增"模拟器环境"专节；踩坑表扩充
+- 新增 E 盘模拟器运行证据截图
+
+### 第 5 次提交 `38eae52`：Repository 抽象层（**当前最新**）
+
+**新增 3 个文件，现有代码零改动**
+
+| 文件 | 作用 |
+|---|---|
+| `core/data/repository/NoteRepository.kt` | 仓储接口，定义 UI 层可用的全部操作 |
+| `core/data/repository/NoteRepositoryImpl.kt` | 默认实现，纯委托给 `NoteDao` |
+| `core/di/RepositoryModule.kt` | Hilt `@Binds` 绑定接口 → 实现 |
+
+**为什么加这一层**：原先 `NoteViewModel` 直接注入 `NoteDao`，导致
+(a) UI 与数据库实现强耦合，(b) 单元测试必须构造真实 Room 数据库。
+加入后依赖方向变为 `ViewModel → NoteRepository(接口) ← NoteRepositoryImpl → NoteDao`，
+测试时传假实现即可 —— **这是覆盖率能上 60% 的前提**。
+
+**关键设计点**
+
+- `createNote(title, content)` 由 Repository 填 `lastModified` 与 `version = 1`，
+  因为"新笔记该有什么时间戳和版本号"属于业务规则，不该让 UI 层操心
+- `@Binds` 模块**必须是 `abstract class`**（`@Binds` 方法无方法体，
+  抽象方法不能放进 `object`），这是它与 `@Provides`（可用 `object`）的关键区别
+
+**⚠️ 本步尚未改变运行时行为**：`NoteViewModel` 仍直接注入 `NoteDao`。
+这是刻意的拆分 —— 把"搭抽象"与"改调用方"分成两次提交，保证每一步都能独立编译。
+下一步接入 ViewModel 后本层才真正生效。
+
+### 第 6 次提交（待提交）：整页笔记编辑器 + 长按删除
+
+> 状态：**代码已完成、编译通过、模拟器实测全部通过，等待用户确认后提交**
+
+#### 为什么要重做输入界面
+
+之前新建笔记用的是 `AlertDialog` 里塞两个 `EditText`，且**没有设置 `inputType`**，
+所以 Android 给了默认的"单行输入框"样式 —— 内容太长时横向滚动而不换行，
+完全不像笔记软件。而且对话框空间狭小，写不了长内容。
+
+本次改为**独立的整页编辑界面**，参照主流笔记/文档软件：顶部工具栏（关闭+保存），
+下方加粗标题栏，再下方是铺满整屏、从左上角开始书写的正文区。
+
+#### 新增文件（4 个）
+
+| 文件 | 作用 |
+|---|---|
+| `res/layout/activity_note_editor.xml` | 整页编辑器布局，关键属性逐条注释 |
+| `res/menu/menu_note_editor.xml` | 顶部「保存」菜单项 |
+| `app/.../NoteEditorViewModel.kt` | 加载/保存单条笔记，用 `SavedStateHandle` 取 noteId |
+| `app/.../NoteEditorActivity.kt` | 编辑器界面，含工具栏、预填、保存逻辑 |
+
+#### 修改文件（4 个）
+
+| 文件 | 改动 |
+|---|---|
+| `MainActivity.kt` | 删除旧对话框；FAB → 新建；点击卡片 → 编辑；新增长按菜单与删除确认 |
+| `NoteAdapter.kt` | 新增 `onItemLongClick` 回调；文案改用字符串资源 |
+| `res/values/strings.xml` | 集中管理所有界面文字，不再硬编码 |
+| `AndroidManifest.xml` | 注册 `NoteEditorActivity`，设 `windowSoftInputMode="adjustResize"` |
+
+#### 关键技术点（答辩可讲）
+
+| 需求 | 实现方式 |
+|---|---|
+| **多行输入** | `android:inputType="textMultiLine"` —— 不设它就是单行、横向滚动 |
+| **从顶部开始写** | `android:gravity="top\|start"` —— 默认是垂直居中，内容少时会浮在屏幕中间 |
+| **去掉输入框边框** | `android:background="@null"` —— 视觉上只剩干净书写区 |
+| **铺满整屏** | `android:layout_height="0dp"` + 上下约束（ConstraintLayout 中 0dp = 填满约束范围） |
+| **键盘不遮挡** | Manifest 里 `windowSoftInputMode="adjustResize"` + 上面那条 0dp，编辑区自动压缩到键盘上方 |
+| **长内容可滚动** | `android:scrollbars="vertical"` |
+| **参数传递** | `SavedStateHandle` 自动从 Intent extras 读取 noteId，Activity 无需手动传参 |
+| **防止覆盖用户输入** | `hasPrefilledInputs` 标记，只在首次收到数据时填充，避免旋转屏幕后重置内容 |
+| **删除二次确认** | `MaterialAlertDialogBuilder` 弹确认框，防止手滑误删 |
+
+#### 删除功能的完整链路
+
+```
+长按卡片
+  → NoteAdapter.onItemLongClick
+  → MainActivity.showNoteOptions()          弹出菜单（数组 + when，便于后续加"置顶/归档"）
+  → 选「删除」
+  → MainActivity.confirmDelete()            二次确认对话框
+  → 确认
+  → NoteViewModel.deleteNote(note)
+  → NoteDao.deleteNote()
+  → Room 删除记录
+  → getActiveNotes() 的 Flow 自动发射新列表
+  → ListAdapter + DiffUtil 自动播放删除动画
+```
+
+**注意最后两步**：删除后**不需要手动通知列表刷新**，Flow 会自动推送新数据。
+这是 Room + Flow + DiffUtil 组合的核心优势，也是答辩时可以强调的架构优点。
+
+#### 遗留项
+
+列表页的 `NoteViewModel` **仍然直接注入 `NoteDao`**，还没改为 `NoteRepository`。
+编辑器（`NoteEditorViewModel`）已经用上了 Repository，所以新代码是正确分层，
+只有旧的列表 ViewModel 待迁移 —— 这就是下一步。
+
+### 第 7 次提交（待提交）：NoteViewModel 迁移到 NoteRepository
+
+> 状态：**代码已完成、编译通过、运行时回归测试通过，等待用户确认后提交**
+
+#### 改动内容
+
+只改了一个文件：`app/.../NoteViewModel.kt`。
+
+| 项 | 重构前 | 重构后 |
+|---|---|---|
+| 注入依赖 | `@Inject constructor(private val noteDao: NoteDao)` | `@Inject constructor(private val noteRepository: NoteRepository)` |
+| 列表数据源 | `noteDao.getActiveNotes()` | `noteRepository.observeActiveNotes()` |
+| 新建笔记 | 自己 `new Note(...)` + `noteDao.insertNote(...)` | `noteRepository.createNote(title, content)` |
+| 更新笔记 | `noteDao.updateNote(note.copy(...))` | `noteRepository.updateNote(note.copy(...))` |
+| 删除笔记 | `noteDao.deleteNote(note)` | `noteRepository.deleteNote(note)` |
+| 对外 API | — | **完全不变**（`activeNotes` 类型、三个方法签名都没动） |
+
+#### 为什么这一步重要
+
+1. **可测试性**：单元测试现在可以传入假的 `NoteRepository` 实现，
+   **完全不需要构造真实 Room 数据库**。这是把覆盖率做到 60% 的前提条件。
+   之前直接依赖 `NoteDao` 的话，只能用 Robolectric 或仪器测试，慢且依赖环境。
+2. **可替换性**：将来把数据源换成"Room + 云端同步"，只改 Repository 实现，ViewModel 不动。
+3. **职责清晰**：`NoteDao` 是"SQL 接口"，`NoteRepository` 是"业务接口"。
+
+#### 验证结果
+
+| 验证项 | 结果 |
+|---|---|
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL，APK 7.14 MB |
+| **app 层是否还有 NoteDao 代码引用** | ✅ **零引用**（只剩注释里的说明文字） |
+| Hilt 生成绑定 | ✅ `NoteViewModel_Factory` 等正常生成 |
+| 启动 | ✅ `topResumedActivity=MainActivity`，无崩溃、无 Hilt 错误 |
+| 新建笔记 | ✅ `After-Refactor` / `refactor-works\nsecond-line`，`version=1` |
+| 列表显示（Flow 链路） | ✅ 通过 `observeActiveNotes()` 正常显示 |
+| 长按菜单 | ✅ 弹出「After-Refactor」+「删除」 |
+| 删除确认 | ✅ 显示「确定删除「After-Refactor」吗？」 |
+| **删除落库** | ✅ 列表清空，数据库 **0 行** |
+
+> **一次成功重构的标志**：对外 API 没变、`MainActivity` 一行没改、行为完全一致。
+> 这次达到了 —— 只改了一个文件的内部实现。
+
 ---
 
-## 实测结果（模拟器 emulator-5554）
+## 实测记录（模拟器 Pixel_10_Pro / E 盘）
+
+### 第 2 次提交后（`20fa3c1`）—— 首次跑通
 
 | 验证项 | 结果 |
 |---|---|
@@ -160,10 +353,71 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 | `:app:assembleDebug` | ✅ BUILD SUCCESSFUL，APK 7.12 MB |
 | `adb install` | ✅ Success |
 | 启动 `MainActivity` | ✅ `topResumedActivity` 正确，进程存活无崩溃 |
-| 空列表渲染 | ✅ Material 3 主题 + FAB 正常（`docs/screenshots/`） |
+| 空列表渲染 | ✅ Material 3 主题 + FAB 正常 |
 | 新建笔记流程 | ✅ 标题 `Hello-Room`、内容 `First-note-from-emulator` |
-| **数据库落库校验** | ✅ `sqlite3` 查询确认 `notes` 表 1 行，字段值全部正确 |
+| **数据库落库校验** | ✅ sqlite3 查询确认 `notes` 表 1 行，字段值全部正确 |
 | 列表刷新（Flow 链路） | ✅ DiffUtil 自动刷新，卡片正确渲染 |
+
+### 第 5 次提交后（`38eae52`）—— Repository 层验证
+
+| 验证项 | 结果 |
+|---|---|
+| `:core:compileDebugKotlin` | ✅ BUILD SUCCESSFUL |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL，APK 7.14 MB |
+| Hilt 生成绑定代码 | ✅ `RepositoryModule.java` + `NoteRepositoryImpl_Factory.java` |
+| 启动 `MainActivity` | ✅ `Displayed +796ms`，**无 Hilt 注入错误** |
+| 新增笔记流程 | ✅ 标题 `Repo-Test`、内容 `Repository-layer-verified` |
+| **数据库落库校验** | ✅ `notes` 表 1 行，id/title/content/isArchived/isPinned/version 全正确 |
+| 现有代码零改动 | ✅ `git status` 对已有文件无任何 `M` 标记 |
+
+> **注意**：第 5 次提交后 Repository 层尚未被使用（`NoteViewModel` 仍注入 DAO），
+> 因此这次实测验证的是"加了新层没把原有功能弄坏"，而非"Repository 生效"。
+
+### 第 6 次提交前（编辑器 + 删除）—— 全链路验证
+
+| 验证项 | 操作 | 结果 |
+|---|---|---|
+| 编辑器布局 | 点 FAB | ✅ 打开 `NoteEditorActivity`，正文区 `[0,544][1280,2784]`，**高 2240px 铺满整屏** |
+| **多行输入** | 输入三行文本 | ✅ 内容为 `Line-one\nLine-two\nLine-three`，**真实换行符** |
+| 新建保存 | 点「保存」 | ✅ 回到 `MainActivity`，列表显示卡片 |
+| **多行落库** | 导出数据库查询 | ✅ `content='Line-one\nLine-two\nLine-three'` |
+| 点卡片编辑 | 点列表卡片 | ✅ 打开 `NoteEditorActivity`，标题与正文**全部预填** |
+| **编辑保存** | 追加一行后保存 | ✅ **`version` 由 1 变为 2**，`lastModified` 已更新 |
+| 长按菜单 | 长按卡片 1 秒 | ✅ 弹出对话框：笔记标题 + 「删除」 |
+| 删除确认 | 点「删除」 | ✅ 显示「确定删除「Editor-Test」吗？此操作不可恢复。」 |
+| **确认删除** | 点确认 | ✅ 列表清空，数据库 **0 行** |
+| 取消删除 | 点「取消」 | ✅ 笔记保留 |
+
+> 截图见 `docs/screenshots/06~09`：编辑器多行、列表、长按菜单、删除确认。
+>
+> 一个自动化操作的小插曲：用 `adb shell input keyevent 123`（`KEYCODE_MOVE_END`）
+> 想移到文末，实际只移到了**当前行**末尾，导致追加的行插在中间。
+> 这是测试脚本的问题，不是 App 的 bug。
+
+### 验证方法备忘（可复用于后续每次提交）
+
+```powershell
+# 1. 构建
+$env:JAVA_HOME="C:\Users\dashen\.jdks\ms-17.0.20.1"
+.\gradlew.bat :app:assembleDebug --offline --console=plain
+
+# 2. 启动模拟器（务必设 ANDROID_PREFS_ROOT）
+$env:ANDROID_PREFS_ROOT = "E:\.android"
+Start-Process "E:\android\Android\Sdk\emulator\emulator.exe" `
+  -ArgumentList "-avd","Pixel_10_Pro","-no-snapshot-load","-no-boot-anim","-gpu","auto"
+
+# 3. 安装并启动
+adb -s emulator-5554 install -r app\build\outputs\apk\debug\app-debug.apk
+adb -s emulator-5554 shell am start -n "com.example.mycoursedesign/.MainActivity"
+
+# 4. 判定界面已渲染（比截图可靠）
+adb -s emulator-5554 logcat -d | Select-String "Displayed com.example.mycoursedesign"
+
+# 5. 权威数据校验：把数据库拉出来用 Python 查
+adb -s emulator-5554 exec-out run-as com.example.mycoursedesign `
+  cat /data/data/com.example.mycoursedesign/databases/note_database.db > _db.db
+# 然后用 sqlite3 查询 SELECT * FROM notes
+```
 
 ---
 
@@ -181,34 +435,58 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 | **改 Gradle Wrapper URL 会让构建卡死** | 改回官方 HTTPS 后 `gradlew` 无限期挂起 | **不要改 URL**。Gradle 用 URL 的哈希定位缓存目录，改 URL = 缓存失效 = 重新下载，而 `services.gradle.org` 在本机被卡死。已实测复现并回滚 |
 | `Set-Content -Encoding UTF8` 会写入 BOM | Java 读 properties 文件可能出错 | 用 `[System.IO.File]::WriteAllText($p,$s,(New-Object System.Text.UTF8Encoding $false))` |
 | 截图全黑≠崩溃 | 启动动画阶段截图得到全黑图 | 等 5~10 秒重截，或用日志 `Displayed <包名>/.MainActivity` 判定 |
+| **模拟器无法输入中文** | 手动敲键盘只能出英文 | **不是 App 的 bug**，是测试环境限制：AVD 的 `hw.keyboard=yes` 直接用物理键盘，且 Gboard 默认无中文布局。App 对中文完全支持（界面中文渲染正常、SQLite 存 TEXT 天然支持 UTF-8）。解决办法见 `PROJECT_PLAN.md` 第 10 节 |
 
 ---
 
 ## 下一步（给接手者）
 
-**提交 #3：`refactor(core): 引入NoteRepository抽象，隔离UI与DAO`**
+**下一步：`feat(app): 新增笔记置顶与归档功能`（功能编号 #6）**
 
-本步是**纯新增**，不改动任何现有代码行为，因此一定能单独编译通过：
+DAO 与 Repository 的方法已经全部就绪（`setPinned` / `setArchived`），只差 UI：
 
-1. 新建 `core/data/repository/NoteRepository.kt`（接口），转发 `NoteDao` 的全部方法
-2. 新建 `core/data/repository/NoteRepositoryImpl.kt`，
-   用 `@Inject constructor(private val noteDao: NoteDao)` 实现接口
-3. 新建 `core/di/RepositoryModule.kt`，
-   用 `@Binds` 把 `NoteRepositoryImpl` 绑定到 `NoteRepository`
-4. 编译验证 → 更新本文件 → 提交
+1. `NoteViewModel` 补 `setPinned(note, pinned)` 与 `setArchived(note, archived)`，
+   内部调用 `noteRepository.setPinned(...)` / `setArchived(...)`
+2. `MainActivity.showNoteOptions()` 的菜单数组从 `["删除"]` 扩展为
+   `["置顶"/"取消置顶", "归档"/"取消归档", "删除"]`，`when(which)` 加对应分支
+3. 列表卡片已有 `tvBadge` 显示「★ 已置顶」「已归档」，DAO 查询已按
+   `isPinned DESC, lastModified DESC` 排序，所以 UI 会自动体现效果
+4. 编译 + 模拟器实测（置顶后排到最前、归档后从主列表消失）+ 更新本文件 + **等用户确认后**提交
+
+**⚠️ 待提交内容（2 次提交，等用户确认）**：
+
+第 6 次：整页编辑器 + 长按删除
+- 新增：`activity_note_editor.xml`、`menu_note_editor.xml`、`NoteEditorViewModel.kt`、`NoteEditorActivity.kt`
+- 修改：`MainActivity.kt`、`NoteAdapter.kt`、`strings.xml`、`AndroidManifest.xml`
+- 截图：`docs/screenshots/06~09`
+
+第 7 次：`NoteViewModel` 迁移到 `NoteRepository`
+- 只改 `NoteViewModel.kt`
 
 **后续步骤（详见 `PROJECT_PLAN.md` 第 3 节）**：
-#4 ViewModel 改依赖 Repository → #5 编辑/删除 → #6 置顶/归档 → #7 暗色主题
+#6 置顶/归档 → #7 暗色主题
 → #8~#10 加密与生物识别 → #11~#12 Markdown 与自动保存 → #13 冲突解决
-→ #14~#18 P4 插件 → #19~#20 单元测试 → #21 README → #22 仓库收尾
+→ #14~#18 P4 插件 → #19~#20 单元测试 → #21 README
+→ **压力测试（`PROJECT_PLAN.md` 第 9 节）**
 
 **已确认的决策**：
 1. ~~viewBinding~~ → ✅ 已确认开启（路线 B）
 2. ~~MaterialCardView~~ → ✅ 已确认改用
 3. ~~gradle-wrapper URL~~ → ❌ **已实测否决**，保持 file:// 现状（改 URL 会让本机构建卡死，详见 `PROJECT_PLAN.md` 第 6 节）
 4. ~~模拟器位置~~ → ✅ 统一使用 E 盘 `Pixel_10_Pro`，C 盘 AVD 已删除（释放 5.2 GB）
+5. ~~编辑器与 ViewModel 重构的先后顺序~~ → ✅ **编辑器优先**（用户能立刻感知体验提升；
+   编辑器是纯新增 UI，不依赖 Repository 重构也能独立编译）。ViewModel 重构顺延。
+6. ~~模拟器中文输入~~ → ⏸ **暂缓**（用户决定先不管）。详见 `PROJECT_PLAN.md` 第 10 节：
+   App 本身完全支持中文，只是模拟器输入手段受限。
+7. ~~压力测试时机~~ → ✅ **项目功能全部完成后再做**（用户明确要求）
 
-**提交纪律（用户明确要求）**：
+**提交纪律（用户明确要求，务必遵守）**：
 - 课设要求 ≥10 次有效提交，**不要把多个步骤合并成一次提交**
+- **绝不主动提交** —— 只有用户明确说"提交"或"推送"才动 Git。
+  文档写好、代码验证通过，都只是准备工作，不能自动升级为提交。
+- **一次只做用户让做的事** —— 用户说"更新文档"就只改文档，
+  不顺手改 `.gitignore`、不顺手提交。发现别的问题先报告，不动手。
+- **每完成一块工作，必须同步更新本文件**（用户明确要求）：
+  功能说明、实测结果、踩坑记录、下一步，缺一不可。
 - 每次提交前必须 `:app:assembleDebug` 编译通过
-- 推送失败时**重试一次即可** —— DevSidecar 边车会自动切换到可用 IP
+- 推送失败时**重试一次即可**；若代理已关闭，直连通常可用
