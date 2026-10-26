@@ -7,13 +7,37 @@
     <string name="action_delete">删除</string>
     <string name="action_cancel">取消</string>
     <string name="action_close">关闭</string>
+    <string name="action_new_note">新增笔记</string>
 
     <!-- ==================== 笔记列表 ==================== -->
+    <string name="list_title_active">我的笔记</string>
+    <string name="list_title_archived">已归档</string>
     <string name="note_untitled">无标题</string>
     <string name="note_no_content">无内容</string>
     <string name="note_pinned_badge">★ 已置顶</string>
     <string name="note_archived_badge">已归档</string>
     <string name="note_options_title">笔记操作</string>
+
+    <!-- ==================== 置顶 / 归档 ==================== -->
+    <string name="action_pin">置顶</string>
+    <string name="action_unpin">取消置顶</string>
+    <string name="action_archive">归档</string>
+    <string name="action_unarchive">取消归档</string>
+    <string name="action_show_archived">查看归档</string>
+    <string name="action_show_active">返回笔记列表</string>
+    <string name="toast_pinned">已置顶</string>
+    <string name="toast_unpinned">已取消置顶</string>
+    <string name="toast_archived">已归档</string>
+    <string name="toast_unarchived">已取消归档</string>
+    <string name="empty_active_hint">还没有笔记，点右下角 + 新建一条</string>
+    <string name="empty_archived_hint">暂无已归档的笔记</string>
+
+    <!-- ==================== 主题 ==================== -->
+    <string name="action_theme">主题</string>
+    <string name="theme_dialog_title">选择主题</string>
+    <string name="theme_follow_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
 
     <!-- ==================== 删除确认 ==================== -->
     <string name="delete_dialog_title">删除笔记</string>

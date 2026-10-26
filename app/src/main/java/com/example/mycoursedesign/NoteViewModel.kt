@@ -5,8 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.data.entity.Note
 import com.example.core.data.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,54 +25,71 @@ import javax.inject.Inject
  *    `Executors.newSingleThreadExecutor().execute(() -> { ... })`，用来在后台执行数据库操作。
  * 3. `StateFlow` 相当于 Java 的 `LiveData`，是可观察的数据流，数据库一变 UI 就自动刷新。
  *
- * 【本次重构：从依赖 NoteDao 改为依赖 NoteRepository】
+ * 【依赖 NoteRepository 而非 NoteDao】
+ * 分层为：ViewModel → NoteRepository(接口) ← NoteRepositoryImpl → NoteDao。
+ * 好处是可测试（测试可传假 Repository，不需要真实 Room 数据库）、可替换（换数据源不改这里）。
  *
- * 重构前：
- *     class NoteViewModel @Inject constructor(private val noteDao: NoteDao)
- * 重构后：
- *     class NoteViewModel @Inject constructor(private val noteRepository: NoteRepository)
+ * 【本次新增：归档视图切换】
  *
- * **这是 Clean Architecture 分层真正落地的关键一步。** 为什么重要：
+ * 归档功能有个 UX 陷阱：如果笔记归档后直接从主列表消失，用户就再也找不到它了
+ * —— 归档变成了"单向黑洞"。所以必须提供一个"查看已归档"的入口。
  *
- * 1. **可测试性**：现在单元测试可以传入一个假的 `NoteRepository` 实现，
- *    完全不需要构造真实的 Room 数据库。这是把测试覆盖率做到 60% 的前提。
- *    （如果直接依赖 `NoteDao`，就只能用 Robolectric 或仪器测试，既慢又依赖环境。）
- * 2. **可替换性**：将来若要把数据源从"本地 Room"换成"Room + 云端同步"，
- *    只需要替换 Repository 的实现，这个文件一行都不用改。
- * 3. **职责清晰**：`NoteDao` 是"SQL 语句的接口"，`NoteRepository` 是"业务操作的接口"。
- *    ViewModel 关心的是"新建一条笔记"，而不是"往 notes 表 insert 一行"。
- *
- * 【注意：对外的 API 完全没有变化】
- * `activeNotes` 的类型仍是 `StateFlow<List<Note>>`，`addNote` / `updateNote` / `deleteNote`
- * 的签名也没变，所以 `MainActivity` 一行都不需要改 —— 这正是一次成功重构的标志。
+ * 实现上用 [flatMapLatest] 把"当前视图模式"和"数据库查询"串起来：
+ *     showArchived(StateFlow<Boolean>) --flatMapLatest--> 对应的 Flow<List<Note>>
+ * 当用户切换视图时，flatMapLatest 会自动取消上一个查询的订阅、订阅新的查询，
+ * 不需要手动管理两套数据的生命周期。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val noteRepository: NoteRepository
 ) : ViewModel() {
 
     /**
-     * 暴露给 UI 的活跃笔记列表状态。
+     * 当前是否处于"查看已归档"模式。
      *
-     * `stateIn` 的三个参数值得记住：
-     * - `viewModelScope`：绑定 ViewModel 生命周期，ViewModel 销毁时自动取消收集，防止内存泄漏。
-     * - `SharingStarted.WhileSubscribed(5000)`：5 秒内没有订阅者就停止上游的数据流，
-     *   节省资源（例如屏幕旋转的瞬间会短暂没有订阅者，5 秒的宽限期避免频繁重启）。
-     * - `initialValue = emptyList()`：StateFlow 必须有初始值，否则 UI 首次渲染拿不到数据。
+     * 放在 ViewModel 而不是 Activity 里，是为了让它在**屏幕旋转后仍然保留**
+     * （Activity 会重建，但 ViewModel 不会）。这正是 MVVM 相对传统开发的优势之一。
      */
-    val activeNotes: StateFlow<List<Note>> = noteRepository.observeActiveNotes()
+    private val _showArchived = MutableStateFlow(false)
+
+    /** 对外只读的视图模式，供 Activity 更新标题与菜单文字。 */
+    val isShowingArchived: StateFlow<Boolean> = _showArchived.asStateFlow()
+
+    /**
+     * 当前列表数据。
+     *
+     * `flatMapLatest` 的作用：每当 [_showArchived] 发射新值，就切换到对应的数据源，
+     * 并**自动取消**上一轮还在进行的收集。这比手动 cancel + 重新 observe 简洁得多，
+     * 也避免了"两个 Flow 同时更新导致列表闪烁"的问题。
+     *
+     * 【Java 思维对照】类似于 `LiveData.switchMap()`：
+     * `Transformations.switchMap(showArchived, archived -> archived ? dao.getArchived() : dao.getActive())`
+     */
+    val notes: StateFlow<List<Note>> = _showArchived
+        .flatMapLatest { archived ->
+            if (archived) {
+                noteRepository.observeArchivedNotes()
+            } else {
+                noteRepository.observeActiveNotes()
+            }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
+    /** 切换"笔记列表 / 已归档"视图。 */
+    fun toggleShowArchived() {
+        _showArchived.value = !_showArchived.value
+    }
+
     /**
      * 新建笔记。
      *
-     * 注意这里不再自己构造 [Note] 对象、也不再手动填 `lastModified` / `version`，
+     * 不再自己构造 [Note] 对象、也不手动填 `lastModified` / `version`，
      * 这些属于业务规则，已经下沉到 [NoteRepository.createNote] 里。
-     * ViewModel 只需要表达"我要新建一条标题为 X、内容为 Y 的笔记"。
      */
     fun addNote(title: String, content: String) {
         viewModelScope.launch {
@@ -94,11 +115,38 @@ class NoteViewModel @Inject constructor(
     }
 
     /**
+     * 设置置顶状态。
+     *
+     * 置顶效果不需要额外处理：`NoteDao.getActiveNotes()` 的 SQL 已经按
+     * `isPinned DESC, lastModified DESC` 排序，只要 `isPinned` 一变，
+     * Room 就会重新发射列表，置顶的笔记自然排到最前面。
+     *
+     * 版本号与时间戳的更新在 DAO 的 `@Transaction` 方法里完成（`setPinned`），
+     * 保证"读-改-写"三步原子执行。
+     */
+    fun setPinned(note: Note, pinned: Boolean) {
+        viewModelScope.launch {
+            noteRepository.setPinned(note.id, pinned)
+        }
+    }
+
+    /**
+     * 设置归档状态。
+     *
+     * 归档后该笔记不再出现在主列表（`getActiveNotes()` 带 `isArchived = 0` 条件），
+     * 但仍保留在数据库中，可通过 [toggleShowArchived] 切到"已归档"视图找回。
+     */
+    fun setArchived(note: Note, archived: Boolean) {
+        viewModelScope.launch {
+            noteRepository.setArchived(note.id, archived)
+        }
+    }
+
+    /**
      * 删除笔记。
      *
-     * 删除后**不需要手动通知列表刷新**：`observeActiveNotes()` 返回的 Flow
-     * 会收到 Room 的数据变更通知并自动发射新列表，`ListAdapter` + `DiffUtil`
-     * 随后自动计算差异并播放删除动画。
+     * 删除后**不需要手动通知列表刷新**：`notes` 这个 StateFlow 会收到 Room 的数据变更
+     * 通知并自动发射新列表，`ListAdapter` + `DiffUtil` 随后自动计算差异并播放删除动画。
      */
     fun deleteNote(note: Note) {
         viewModelScope.launch {

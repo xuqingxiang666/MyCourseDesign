@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  主界面工具栏菜单。
+
+  两个菜单项：
+  1. 切换归档视图：在"笔记列表"和"已归档"之间来回切换
+  2. 主题：选择"跟随系统 / 浅色 / 深色"
+
+  第 1 项的标题在运行时根据当前模式动态设置（见 MainActivity.observeViewMode）。
+  两项都设为 showAsAction="never"，收进右上角的溢出菜单（⋮），
+  避免占用工具栏空间干扰标题显示。
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_toggle_archive"
+        android:title="@string/action_show_archived"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_theme"
+        android:title="@string/action_theme"
+        app:showAsAction="never" />
+
+</menu>

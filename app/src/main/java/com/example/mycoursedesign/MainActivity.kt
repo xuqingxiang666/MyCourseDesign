@@ -1,6 +1,8 @@
 package com.example.mycoursedesign
 
 import android.os.Bundle
+import android.view.View
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
@@ -14,6 +16,8 @@ import kotlinx.coroutines.launch
 
 /**
  * 应用主界面：展示笔记列表，提供新建入口，并支持点击编辑、长按操作。
+ *
+ * 界面由三部分组成：顶部工具栏（切换"我的笔记 / 已归档"）、笔记列表、右下角新增按钮。
  *
  * 【Java 思维对照】
  * - `@AndroidEntryPoint`：告诉 Hilt 这个 Activity 需要参与依赖注入，
@@ -49,15 +53,12 @@ class MainActivity : AppCompatActivity() {
 
         setupRecyclerView()
         setupFab()
+        setupToolbar()
+        observeViewMode()
         observeNotes()
     }
 
-    /**
-     * 初始化列表。
-     *
-     * 点击 → 打开编辑器编辑这条笔记；
-     * 长按 → 弹出操作菜单（目前只有删除，后续会加置顶/归档）。
-     */
+    /** 初始化列表：点击编辑、长按弹出操作菜单。 */
     private fun setupRecyclerView() {
         adapter = NoteAdapter(
             onItemClick = { note -> openEditor(note.id) },
@@ -74,10 +75,110 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 打开发编辑器界面。
+     * 初始化顶部工具栏。
      *
-     * @param noteId 要编辑的笔记 id；传 [NoteEditorActivity.NEW_NOTE_ID] 表示新建。
+     * 菜单里只有一个"切换归档视图"的项。这里只负责加载菜单和绑定点击事件，
+     * 菜单文字的更新交给 [observeViewMode]，因为文字要随视图模式变化。
      */
+    private fun setupToolbar() {
+        binding.toolbar.inflateMenu(R.menu.menu_main)
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_toggle_archive -> {
+                    viewModel.toggleShowArchived()
+                    true
+                }
+                R.id.action_theme -> {
+                    showThemeDialog()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    /**
+     * 弹出主题选择对话框（跟随系统 / 浅色 / 深色）。
+     *
+     * 【实现要点】
+     * - 用 `setSingleChoiceItems` 做单选列表，并把当前模式对应的序号设为选中项
+     * - 选中后立刻调用 [ThemePreferences.saveMode]，它会触发
+     *   `AppCompatDelegate.setDefaultNightMode(...)`，AppCompat 随即**自动重建
+     *   所有 Activity**，于是界面立即切换主题，无需手动刷新
+     * - 因为会重建，所以先 `dismiss()` 关掉对话框，避免它跟着重建出现错位
+     */
+    private fun showThemeDialog() {
+        val modes = ThemePreferences.supportedModes
+        val labels = arrayOf(
+            getString(R.string.theme_follow_system),
+            getString(R.string.theme_light),
+            getString(R.string.theme_dark)
+        )
+        // indexOf 返回当前模式在列表中的位置；理论上一定找得到，兜底取 0
+        val checkedIndex = modes.indexOf(ThemePreferences.currentMode(this)).coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.theme_dialog_title)
+            .setSingleChoiceItems(labels, checkedIndex) { dialog, which ->
+                dialog.dismiss()
+                ThemePreferences.saveMode(this, modes[which])
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
+    }
+
+    /**
+     * 观察"当前视图模式"，同步更新工具栏标题、菜单文字和空状态文案。
+     *
+     * 三处文字同时更新，是为了让用户随时明确自己正在看
+     * "我的笔记"还是"已归档" —— 否则两个视图在空数据时看起来完全一样。
+     */
+    private fun observeViewMode() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isShowingArchived.collect { archived ->
+                    binding.toolbar.setTitle(
+                        if (archived) R.string.list_title_archived else R.string.list_title_active
+                    )
+                    binding.toolbar.menu.findItem(R.id.action_toggle_archive)?.title = getString(
+                        if (archived) R.string.action_show_active else R.string.action_show_archived
+                    )
+                    binding.tvEmpty.setText(
+                        if (archived) R.string.empty_archived_hint else R.string.empty_active_hint
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * 订阅 ViewModel 暴露的笔记列表状态。
+     *
+     * ★ 这里是 Kotlin/协程最容易踩坑的地方。
+     *
+     * 【Java 思维对照】
+     * 用 LiveData 时写的是：
+     *     viewModel.getNotes().observe(this, notes -> adapter.setNotes(notes));
+     * 一个 `observe()` 就够了，因为 LiveData 自带生命周期感知。
+     *
+     * 但 StateFlow **没有 `observe()` 方法**，直接写会报
+     * `Unresolved reference: observe`。正确做法是 `repeatOnLifecycle`：
+     * 界面可见（STARTED）时开始收集，不可见时自动取消，重新可见时自动恢复。
+     */
+    private fun observeNotes() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.notes.collect { notes ->
+                    adapter.submitList(notes)
+                    // 列表为空时显示提示文字，避免用户以为界面出错
+                    binding.tvEmpty.visibility =
+                        if (notes.isEmpty()) View.VISIBLE else View.GONE
+                }
+            }
+        }
+    }
+
+    /** 打开编辑器。传 [NoteEditorActivity.NEW_NOTE_ID] 表示新建。 */
     private fun openEditor(noteId: Long) {
         startActivity(NoteEditorActivity.newIntent(this, noteId))
     }
@@ -85,29 +186,67 @@ class MainActivity : AppCompatActivity() {
     /**
      * 长按笔记弹出的操作菜单。
      *
-     * 【为什么用数组 + when(which) 而不是写死一个"删除"按钮】
-     * 后续要给菜单加"置顶""归档"，只需要往数组里加一项、往 when 里加个分支，
-     * 扩展成本几乎为零。这是为了避免下次改动时重写整个方法。
+     * 【为什么用"动态构建选项数组"而不是写死几个按钮】
+     * 菜单内容依赖笔记自身的状态：
+     * - 已归档的笔记：只能「取消归档」或「删除」，不应再提供"置顶/归档"
+     * - 活跃的笔记：提供「置顶/取消置顶」「归档」「删除」
+     *
+     * 用两个平行列表（`labels` 放显示文字、`actions` 放对应操作）一一对应，
+     * 点击时按索引取 action 执行。将来增加选项只需各追加一项，不必改结构。
      */
     private fun showNoteOptions(note: Note) {
-        val options = arrayOf(getString(R.string.action_delete))
+        val labels = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+
+        if (note.isArchived) {
+            // 归档视图下：允许取消归档
+            labels += getString(R.string.action_unarchive)
+            actions += { changeArchived(note, false) }
+        } else {
+            // 活跃视图下：允许置顶/取消置顶、归档
+            labels += getString(
+                if (note.isPinned) R.string.action_unpin else R.string.action_pin
+            )
+            actions += { changePinned(note, !note.isPinned) }
+
+            labels += getString(R.string.action_archive)
+            actions += { changeArchived(note, true) }
+        }
+
+        labels += getString(R.string.action_delete)
+        actions += { confirmDelete(note) }
 
         MaterialAlertDialogBuilder(this)
             .setTitle(note.title.ifBlank { getString(R.string.note_untitled) })
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> confirmDelete(note)
-                }
-            }
+            .setItems(labels.toTypedArray()) { _, which -> actions[which]() }
             .show()
+    }
+
+    /** 切换置顶状态并给出提示。 */
+    private fun changePinned(note: Note, pinned: Boolean) {
+        viewModel.setPinned(note, pinned)
+        Toast.makeText(
+            this,
+            if (pinned) R.string.toast_pinned else R.string.toast_unpinned,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    /** 切换归档状态并给出提示。 */
+    private fun changeArchived(note: Note, archived: Boolean) {
+        viewModel.setArchived(note, archived)
+        Toast.makeText(
+            this,
+            if (archived) R.string.toast_archived else R.string.toast_unarchived,
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     /**
      * 删除确认对话框。
      *
-     * 删除是"不可恢复"操作，必须二次确认，否则手滑长按就把笔记弄丢了。
-     * 确认后调用 ViewModel 删除，列表通过 [observeNotes] 的 Flow 自动刷新，
-     * 无需手动通知适配器。
+     * 删除不可恢复，必须二次确认。确认后由 ViewModel 执行删除，
+     * 列表通过 Flow 自动刷新，不需要手动通知适配器。
      */
     private fun confirmDelete(note: Note) {
         val displayTitle = note.title.ifBlank { getString(R.string.note_untitled) }
@@ -120,37 +259,5 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.action_cancel, null)
             .show()
-    }
-
-    /**
-     * 订阅 ViewModel 暴露的笔记列表状态。
-     *
-     * ★ 这里是本文件最关键的一处 Kotlin/协程写法，也是常见报错点。
-     *
-     * 【Java 思维对照】
-     * 如果用的是 LiveData，你写的是：
-     *     viewModel.getActiveNotes().observe(this, notes -> adapter.setNotes(notes));
-     * 一个 `observe()` 就够了，因为 LiveData 自带生命周期感知。
-     *
-     * 但这里用的是 **StateFlow**（Kotlin 协程的数据流），它是"冷流 + 需手动收集"的设计，
-     * **没有 `observe()` 方法**。直接写 `viewModel.activeNotes.observe(this) { ... }`
-     * 会编译报错：`Unresolved reference: observe`。
-     *
-     * 正确做法是 `repeatOnLifecycle`：
-     * 1. 当界面处于 STARTED（可见）状态时才开始收集数据流；
-     * 2. 当界面进入 STOPPED（如按 Home 键、跳转到别的界面）时自动取消收集，
-     *    避免后台无谓地刷新 UI —— 这正是 LiveData 曾经帮你做的事；
-     * 3. 界面重新可见时自动重新收集。
-     */
-    private fun observeNotes() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.activeNotes.collect { notes ->
-                    // collect 的 lambda 参数类型可以从 Flow 的泛型推断出来，
-                    // 写 `collect { notes -> ... }` 即可，无需显式标注类型。
-                    adapter.submitList(notes)
-                }
-            }
-        }
     }
 }

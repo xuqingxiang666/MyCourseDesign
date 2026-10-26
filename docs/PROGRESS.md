@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态：笔记增删改查完整可用（编辑器版本待提交）
+## 当前状态：笔记增删改查 + 置顶归档全部可用（置顶归档待提交）
 
 | 项 | 状态 |
 |---|---|
@@ -18,8 +18,10 @@
 | **整页编辑器** | ✅ 已实测，多行输入/换行/预填全部正常 |
 | **笔记编辑** | ✅ 已实测，`version` 正确递增 |
 | **笔记删除** | ✅ 已实测，长按菜单 + 确认框 + 数据库记录清除 |
+| **置顶 / 归档** | ✅ 已实测：置顶排序、归档隔离、"查看归档"视图、取消归档全部正常 |
+| **暗色主题** | ✅ 已实测：「跟随系统 / 浅色 / 深色」三选项，列表、编辑器、对话框均可读，切换无崩溃 |
 | **Repository 抽象层** | ✅ **已全面生效**：列表与编辑器两个 ViewModel 都只依赖 `NoteRepository`，app 层已零 `NoteDao` 引用 |
-| 有效提交次数 | **5 次**（要求 ≥10）+ **2 次待提交**（编辑器+删除、ViewModel 重构，等用户确认） |
+| 有效提交次数 | **7 次**（要求 ≥10）+ **1 次待提交**（置顶/归档） |
 | 模拟器 | ✅ **`Pixel_10_Pro`（E 盘）** —— 见下方"模拟器环境"一节 |
 
 ---
@@ -88,8 +90,9 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 3 | `chore: 完善gitignore并规范仓库卫生，移除误提交的IDE私有文件` | `c08dc43` | 仓库卫生（原计划 #22，提前完成） |
 | 4 | `docs: 补充模拟器环境手册与实测记录` | `3764e8f` | 文档 |
 | 5 | `refactor(core): 引入NoteRepository抽象层，隔离UI与数据库实现` | `38eae52` | **核心代码** |
-| 6 | `feat(app): 整页笔记编辑器与长按删除` | **待提交** | **核心代码**（改动已在工作区，等用户确认后提交） |
-| 7 | `refactor(app): NoteViewModel改为依赖NoteRepository` | **待提交** | **核心代码**（纯机械替换，对外 API 不变） |
+| 6 | `feat(app): 整页笔记编辑器与长按删除` | `dba31ec` | **核心代码** |
+| 7 | `refactor(app): NoteViewModel改为依赖NoteRepository` | `8951ad8` | **核心代码**（纯机械替换，对外 API 不变） |
+| 8 | `feat(app): 笔记置顶/归档与可切换暗色主题` | **待提交** | **核心代码**（置顶归档 + 暗色主题合并为一次提交） |
 
 > **编号说明**：原计划编号与真实提交顺序在 #3 之后出现了偏移，
 > 因为 #3、#4 是仓库卫生与文档类提交，它们提前占用了序号。
@@ -99,10 +102,11 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 
 | # | 提交 | 状态 |
 |---|---|---|
-| 4 | `feat(app): 整页笔记编辑器与长按删除` | ✅ **代码已完成，待提交** |
-| 5 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ **代码已完成，待提交** |
-| 6 | `feat(app): 新增笔记置顶与归档功能` | ⬜ |
-| 7 | `feat(app): 适配暗色主题并完善列表视觉` | ⬜ |
+| 4 | `feat(app): 整页笔记编辑器与长按删除` | ✅ `dba31ec` |
+| 5 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ `8951ad8` |
+| 6 | `feat(app): 新增笔记置顶与归档功能` | ✅ **代码已完成，待提交** |
+| 7 | `feat(app): 适配暗色主题并完善列表视觉` | ✅ **代码已完成，与 #6 合并提交** |
+| 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ⬜ **下一步** |
 | 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ⬜ |
 | 9 | `feat(core): 实现笔记加密与密钥管理` | ⬜ |
 | 10 | `feat(app): 接入生物识别解锁与加密笔记界面` | ⬜ |
@@ -229,9 +233,9 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 这是刻意的拆分 —— 把"搭抽象"与"改调用方"分成两次提交，保证每一步都能独立编译。
 下一步接入 ViewModel 后本层才真正生效。
 
-### 第 6 次提交（待提交）：整页笔记编辑器 + 长按删除
+### 第 6 次提交 `dba31ec`：整页笔记编辑器 + 长按删除
 
-> 状态：**代码已完成、编译通过、模拟器实测全部通过，等待用户确认后提交**
+> 状态：✅ **已提交并推送**（`dba31ec`，12 个文件，+538/-47 行）
 
 #### 为什么要重做输入界面
 
@@ -299,9 +303,9 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 编辑器（`NoteEditorViewModel`）已经用上了 Repository，所以新代码是正确分层，
 只有旧的列表 ViewModel 待迁移 —— 这就是下一步。
 
-### 第 7 次提交（待提交）：NoteViewModel 迁移到 NoteRepository
+### 第 7 次提交 `8951ad8`：NoteViewModel 迁移到 NoteRepository
 
-> 状态：**代码已完成、编译通过、运行时回归测试通过，等待用户确认后提交**
+> 状态：✅ **已提交并推送**（`8951ad8`，3 个文件，+569/-60 行，其中大部分是文档）
 
 #### 改动内容
 
@@ -340,6 +344,115 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 
 > **一次成功重构的标志**：对外 API 没变、`MainActivity` 一行没改、行为完全一致。
 > 这次达到了 —— 只改了一个文件的内部实现。
+
+### 第 8 次提交（待提交）：笔记置顶与归档
+
+> 状态：**代码已完成、编译通过、模拟器实测全部通过，等待用户确认后提交**
+
+#### 为什么还要做"查看归档"视图
+
+归档有个 UX 陷阱：笔记归档后从主列表消失，如果**没有查看归档的入口**，
+用户就再也找不回那条笔记 —— 归档变成"单向黑洞"。
+所以本期除了置顶/归档两个动作，还必须提供 `查看归档 / 返回笔记列表` 的切换。
+
+#### 新增文件
+
+| 文件 | 作用 |
+|---|---|
+| `res/menu/menu_main.xml` | 主界面工具栏菜单，目前只有"切换归档视图"一项 |
+
+#### 修改文件
+
+| 文件 | 改动 |
+|---|---|
+| `NoteViewModel.kt` | 新增 `setPinned` / `setArchived`；新增 `_showArchived` 状态与 `toggleShowArchived()`；列表数据源改为 `flatMapLatest` 按视图模式切换；`activeNotes` 更名 `notes` |
+| `MainActivity.kt` | 新增工具栏初始化 `setupToolbar()`、视图模式订阅 `observeViewMode()`；长按菜单改为**动态构建**（归档态只给"取消归档/删除"，活跃态给"置顶/归档/删除"） |
+| `activity_main.xml` | 顶部新增 `MaterialToolbar`；RecyclerView 高度 `match_parent` → `0dp` 并约束到工具栏下方；新增空状态 `tvEmpty` |
+| `strings.xml` | 新增置顶/归档/视图切换/Toast/空状态等 14 条文案 |
+
+#### 关键技术点
+
+| 需求 | 实现 | 说明 |
+|---|---|---|
+| 视图切换 | `showArchived.flatMapLatest { ... }` | 切换时自动取消上一轮订阅，避免两套数据同时更新导致闪烁。等价于 LiveData 的 `switchMap` |
+| 视图模式存哪 | ViewModel 里（`MutableStateFlow`） | Activity 会因旋转重建，ViewModel 不会，所以模式能在旋转后保留 |
+| 菜单按状态变化 | 两个平行列表 `labels` / `actions`，按索引对应 | 归档态和活跃态提供不同选项，防止对已归档笔记显示"归档"这种无效操作 |
+| 置顶排序 | **不需要额外代码** | DAO 的 SQL 已按 `isPinned DESC, lastModified DESC` 排序，`isPinned` 一变列表自动重排 |
+| 归档隔离 | **不需要额外代码** | `getActiveNotes()` 自带 `isArchived = 0` 条件 |
+| 版本号/时间戳 | DAO 的 `@Transaction` 方法内更新 | `setPinned` / `setArchived` 保证"读-改-写"原子执行 |
+
+#### 实测验证（模拟器 Pixel_10_Pro / Android API 37.2）
+
+| 验证项 | 结果 |
+|---|---|
+| 长按活跃笔记 | ✅ 菜单三项：置顶 / 归档 / 删除 |
+| **置顶** | ✅ Note-A 移到列表最前，显示「★ 已置顶」，数据库 `pinned=1 version=2` |
+| **归档** | ✅ Note-B 从主列表消失，数据库 `archived=1 version=2` |
+| 切到归档视图 | ✅ 工具栏标题变「已归档」，Note-B 出现并带「已归档」徽章 |
+| 归档笔记的长按菜单 | ✅ 只显示「取消归档 / 删除」（不会误给"置顶/归档"） |
+| **取消归档** | ✅ 归档视图变空并提示「暂无已归档的笔记」，数据库 `archived=0 version=3` |
+| 切回主列表 | ✅ Note-A（置顶）在上、Note-B 在下，顺序正确 |
+| 空状态文案 | ✅ 主列表「还没有笔记，点右下角 + 新建一条」；归档视图「暂无已归档的笔记」 |
+
+截图见 `docs/screenshots/10-pinned.png`、`11-archived-view.png`。
+
+### 第 8 次提交（待提交）：置顶归档 + 暗色主题（合并提交）
+
+> 状态：**两项功能均已完成、编译通过、模拟器实测通过，等待提交**
+>
+> 说明：用户要求把"置顶/归档"和"暗色主题"合并为一次提交，
+> 因此本次提交包含两个功能。代价是提交次数少一次（8 而非 9），
+> 但后续还有 15+ 个提交点，不影响达标。
+
+#### 暗色主题：改了什么
+
+**先说一个发现**：项目原本就是 `Theme.Material3.DayNight.NoActionBar`，
+且所有布局的颜色都用主题属性（`?attr/colorOnSurface` 等），**没有一处硬编码颜色**。
+所以"跟随系统深色"其实早就生效了 —— 这次真正新增的是**让用户在 App 内自己选**。
+
+| 新增/修改 | 内容 |
+|---|---|
+| `ThemePreferences.kt`（新增） | 主题偏好的读写与应用：`SharedPreferences` 存 `AppCompatDelegate` 的三种模式常量 |
+| `MyApplication.kt` | `onCreate` 里调用 `ThemePreferences.applyStoredMode(this)`，保证启动即生效 |
+| `menu_main.xml` | 新增「主题」菜单项 |
+| `strings.xml` | 新增主题相关 5 条文案 |
+| `MainActivity.kt` | `showThemeDialog()`：单选对话框列出三种模式，选中即保存并生效 |
+
+#### 关键技术点
+
+| 需求 | 实现 | 说明 |
+|---|---|---|
+| 三种模式 | `AppCompatDelegate.MODE_NIGHT_{FOLLOW_SYSTEM,NO,YES}` | 直接把框架常量作为存储值，省掉自定义枚举映射 |
+| 切换后立即生效 | `setDefaultNightMode(...)` | AppCompat 会**自动重建所有 Activity**，无需手动 refresh |
+| 启动即用上次选择 | `Application.onCreate` 里应用 | 放在 Activity 里会先渲染成错误主题再闪一下 |
+| 深色下文字可读 | 布局全用 `?attr/colorOnSurface` / `colorOnSurfaceVariant` | 这也是之前把 `#333333` 改成主题属性的回报 |
+
+#### 实测验证
+
+| 验证项 | 结果 |
+|---|---|
+| ⋮ 菜单 | ✅ 显示「查看归档」「主题」两项 |
+| 主题对话框 | ✅ 三个选项，当前模式正确打勾（默认「跟随系统」） |
+| 切到深色 | ✅ Activity 重建后界面变深色，无崩溃 |
+| 深色 · 列表 | ✅ 深底 + 深紫卡片 + 白色标题 + 浅灰正文 + 紫色 FAB |
+| 深色 · 编辑器 | ✅ 深底、白色标题、分隔线可见、正文可读 |
+| 深色 · 对话框 | ✅ 深色面板 + 白色标题 + 紫粉色按钮 |
+| 深色下置顶 | ✅ 徽章「★ 已置顶」为紫色，排序正确，数据库 `pinned=1` |
+| 切到浅色 | ✅ 恢复正常浅色配色 |
+| 切回「跟随系统」 | ✅ 三次切换全程无崩溃 |
+| 重新打开对话框 | ✅ 正确显示当前已保存的模式 |
+
+截图：`12-dark-mode-list.png`、`13-dark-mode-editor.png`、
+`14-dark-mode-menu.png`、`15-dark-mode-dialog.png`、`16-light-mode-list.png`。
+
+#### 一个测试插曲（已澄清）
+
+测试过程中发现数据库里少了 Note-A、Note-B 的 `version` 变成 13。
+我一度怀疑是"强制结束模拟器导致 userdata 损坏"，**但经用户说明，这是他自己测试时
+删除笔记、反复切换置顶/归档造成的** —— 属于正常操作痕迹，不是 bug。
+`version=13` 恰好反过来证明了版本号递增逻辑工作正常。
+
+**教训**：看到异常数据先确认"是否有人操作过"，再怀疑代码或环境。
 
 ---
 
@@ -441,31 +554,27 @@ adb -s emulator-5554 exec-out run-as com.example.mycoursedesign `
 
 ## 下一步（给接手者）
 
-**下一步：`feat(app): 新增笔记置顶与归档功能`（功能编号 #6）**
+**下一步：`feat(core): Note实体新增加密相关字段与DAO支持`（功能编号 #8）**
 
-DAO 与 Repository 的方法已经全部就绪（`setPinned` / `setArchived`），只差 UI：
+这是"笔记加密 + 生物识别"三步中的第一步，**本步只加字段与数据层支持，不改 UI**，
+所以一定能独立编译通过：
 
-1. `NoteViewModel` 补 `setPinned(note, pinned)` 与 `setArchived(note, archived)`，
-   内部调用 `noteRepository.setPinned(...)` / `setArchived(...)`
-2. `MainActivity.showNoteOptions()` 的菜单数组从 `["删除"]` 扩展为
-   `["置顶"/"取消置顶", "归档"/"取消归档", "删除"]`，`when(which)` 加对应分支
-3. 列表卡片已有 `tvBadge` 显示「★ 已置顶」「已归档」，DAO 查询已按
-   `isPinned DESC, lastModified DESC` 排序，所以 UI 会自动体现效果
-4. 编译 + 模拟器实测（置顶后排到最前、归档后从主列表消失）+ 更新本文件 + **等用户确认后**提交
+1. `Note` 实体目前已有 `isEncrypted` 字段（当初就预留了），确认是否需要补充
+   如 `encryptedContent` 或直接复用 `content` 存密文
+2. `NoteDao` 增加按 `isEncrypted` 过滤/统计的查询（若加密笔记需在列表中模糊显示）
+3. 编译验证 + 更新本文件 + **等用户确认后**提交
 
-**⚠️ 待提交内容（2 次提交，等用户确认）**：
+**⚠️ 待提交内容（1 次提交，等用户确认）**：
 
-第 6 次：整页编辑器 + 长按删除
-- 新增：`activity_note_editor.xml`、`menu_note_editor.xml`、`NoteEditorViewModel.kt`、`NoteEditorActivity.kt`
-- 修改：`MainActivity.kt`、`NoteAdapter.kt`、`strings.xml`、`AndroidManifest.xml`
-- 截图：`docs/screenshots/06~09`
-
-第 7 次：`NoteViewModel` 迁移到 `NoteRepository`
-- 只改 `NoteViewModel.kt`
+第 8 次：置顶归档 + 暗色主题（用户要求合并）
+- 新增：`res/menu/menu_main.xml`、`ThemePreferences.kt`
+- 修改：`NoteViewModel.kt`、`MainActivity.kt`、`MyApplication.kt`、
+  `activity_main.xml`、`strings.xml`
+- 截图：`docs/screenshots/10~16`（7 张）
+- 本文件与 `PROJECT_PLAN.md`
 
 **后续步骤（详见 `PROJECT_PLAN.md` 第 3 节）**：
-#6 置顶/归档 → #7 暗色主题
-→ #8~#10 加密与生物识别 → #11~#12 Markdown 与自动保存 → #13 冲突解决
+#8~#10 加密与生物识别 → #11~#12 Markdown 与自动保存 → #13 冲突解决
 → #14~#18 P4 插件 → #19~#20 单元测试 → #21 README
 → **压力测试（`PROJECT_PLAN.md` 第 9 节）**
 
@@ -479,6 +588,10 @@ DAO 与 Repository 的方法已经全部就绪（`setPinned` / `setArchived`）�
 6. ~~模拟器中文输入~~ → ⏸ **暂缓**（用户决定先不管）。详见 `PROJECT_PLAN.md` 第 10 节：
    App 本身完全支持中文，只是模拟器输入手段受限。
 7. ~~压力测试时机~~ → ✅ **项目功能全部完成后再做**（用户明确要求）
+8. ~~C 盘空间约束~~ → ✅ **默认不在 C 盘产生大文件**。AVD 固定在 E 盘；
+   临时文件放 `E:\dsh-tmp`（构建时把 `TEMP`/`TMP` 指向它）；
+   数据库导出等中间产物也放 E 盘并事后删除。Gradle 增量缓存
+   （`~/.gradle`，约 3.7 GB）无法避免，但每次构建只增几十 MB。
 
 **提交纪律（用户明确要求，务必遵守）**：
 - 课设要求 ≥10 次有效提交，**不要把多个步骤合并成一次提交**

@@ -1,17 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  主界面布局：顶部工具栏 + 笔记列表 + 右下角新建按钮。
+
+  【为什么顶部需要一个工具栏】
+  因为本期新增了"置顶 / 归档"功能，而归档后的笔记会从主列表消失。
+  如果不提供"查看已归档"的入口，用户归档后就再也找不回那条笔记了
+  —— 归档会变成"单向黑洞"。工具栏右侧的菜单项就是用来切换
+  "笔记列表 / 已归档"两个视图的。
+-->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- 笔记列表 -->
+    <!-- 顶部工具栏：标题会随视图模式变化，右侧菜单用于切换归档视图 -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorSurface"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:title="@string/list_title_active" />
+
+    <!--
+      笔记列表。
+
+      layout_height 从 match_parent 改成 0dp，是为了让它只占据
+      "工具栏下方到屏幕底部"的空间。若仍是 match_parent，
+      列表第一项会被工具栏盖住。
+    -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="8dp"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="4dp"
+        android:paddingBottom="88dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
     <!-- 悬浮按钮：新增笔记 -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -19,9 +51,31 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:contentDescription="新增笔记"
+        android:contentDescription="@string/action_new_note"
         android:src="@android:drawable/ic_input_add"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!--
+      空状态提示。
+
+      没有这条提示时，列表为空用户在"我的笔记"和"已归档"两个视图之间切换
+      会看到完全一样的空白页，分不清是"没数据"还是"切错了视图"。
+    -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center"
+        android:text="@string/empty_active_hint"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
