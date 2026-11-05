@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     /** 初始化列表：点击编辑、长按弹出操作菜单。 */
     private fun setupRecyclerView() {
         adapter = NoteAdapter(
-            onItemClick = { note -> openEditor(note.id) },
+            onItemClick = { note -> onNoteClicked(note) },
             onItemLongClick = { note -> showNoteOptions(note) }
         )
         binding.recyclerView.adapter = adapter
@@ -213,6 +213,16 @@ class MainActivity : AppCompatActivity() {
             actions += { changeArchived(note, true) }
         }
 
+        // 加密 / 取消加密。加密与归档是两个独立维度，所以放在 if/else 之外，
+        // 两种视图下都提供（归档笔记也可能需要加密）。
+        if (note.isEncrypted) {
+            labels += getString(R.string.action_decrypt)
+            actions += { changeEncryption(note, encrypt = false) }
+        } else {
+            labels += getString(R.string.action_encrypt)
+            actions += { changeEncryption(note, encrypt = true) }
+        }
+
         labels += getString(R.string.action_delete)
         actions += { confirmDelete(note) }
 
@@ -240,6 +250,97 @@ class MainActivity : AppCompatActivity() {
             if (archived) R.string.toast_archived else R.string.toast_unarchived,
             Toast.LENGTH_SHORT
         ).show()
+    }
+
+    /**
+     * 点击笔记时的分流：
+     * - 普通笔记：直接进编辑器
+     * - **加密笔记**：先验证身份，通过后以只读方式展示解密内容
+     *
+     * 【为什么加密笔记不直接进编辑器】
+     * 编辑器保存时写的是明文。如果允许编辑加密笔记，保存后就会出现
+     * "isEncrypted = true 但 content 是明文"的不一致状态，解密必然失败。
+     * 所以加密状态下先做只读预览；需要编辑时，让用户显式「取消加密」。
+     * 这是刻意的取舍：用一点操作步骤换取数据一致性。
+     */
+    private fun onNoteClicked(note: Note) {
+        if (note.isEncrypted) {
+            authenticateAndPreview(note)
+        } else {
+            openEditor(note.id)
+        }
+    }
+
+    /**
+     * 弹出身份验证，通过后展示解密内容。
+     *
+     * 流程：检查设备是否支持 → BiometricPrompt → 解密 → 只读预览对话框
+     */
+    private fun authenticateAndPreview(note: Note) {
+        // 先检查：设备没设置指纹/锁屏时，直接给出明确指引，而不是弹一个必然失败的框
+        if (!BiometricGate.canAuthenticate(this)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.biometric_title)
+                .setMessage(R.string.biometric_unavailable)
+                .setPositiveButton(R.string.preview_close, null)
+                .show()
+            return
+        }
+
+        BiometricGate.authenticate(
+            activity = this,
+            title = getString(R.string.biometric_title),
+            subtitle = getString(R.string.biometric_subtitle),
+            onSuccess = {
+                // 验证通过，才去解密。没通过就不碰数据，明文永远不会提前出现在内存里被 UI 用到
+                viewModel.readDecryptedContent(note) { plaintext ->
+                    if (plaintext == null) {
+                        toast(R.string.toast_decrypt_failed)
+                    } else {
+                        showPreviewDialog(note, plaintext)
+                    }
+                }
+            },
+            onFailure = { reason ->
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.biometric_title)
+                    .setMessage(reason + "\n\n" + getString(R.string.biometric_failed))
+                    .setPositiveButton(R.string.preview_close, null)
+                    .show()
+            }
+        )
+    }
+
+    /** 只读预览对话框：展示解密后的正文。 */
+    private fun showPreviewDialog(note: Note, plaintext: String) {
+        val body = if (plaintext.isBlank()) getString(R.string.note_no_content) else plaintext
+        MaterialAlertDialogBuilder(this)
+            .setTitle(note.title.ifBlank { getString(R.string.note_untitled) })
+            .setMessage(body + "\n\n" + getString(R.string.preview_hint_edit))
+            .setPositiveButton(R.string.preview_close, null)
+            .show()
+    }
+
+    /**
+     * 加密 / 取消加密。
+     *
+     * @param encrypt true = 加密，false = 取消加密（解密后写回明文）
+     */
+    private fun changeEncryption(note: Note, encrypt: Boolean) {
+        if (encrypt) {
+            viewModel.encryptNote(note) { success ->
+                toast(if (success) R.string.toast_encrypted else R.string.toast_encrypt_failed)
+            }
+        } else {
+            viewModel.removeEncryption(note) { success ->
+                toast(if (success) R.string.toast_decrypted else R.string.toast_decrypt_failed)
+            }
+        }
+    }
+
+    /** Toast 的小包装，避免每次写三行。 */
+    private fun toast(resId: Int) {
+        Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
     }
 
     /**

@@ -7,7 +7,7 @@
 
 ---
 
-## 当前状态：笔记增删改查 + 置顶归档全部可用（置顶归档待提交）
+## 当前状态：笔记增删改查 + 置顶归档 + 暗色主题全部可用（加密功能开发中）
 
 | 项 | 状态 |
 |---|---|
@@ -21,7 +21,7 @@
 | **置顶 / 归档** | ✅ 已实测：置顶排序、归档隔离、"查看归档"视图、取消归档全部正常 |
 | **暗色主题** | ✅ 已实测：「跟随系统 / 浅色 / 深色」三选项，列表、编辑器、对话框均可读，切换无崩溃 |
 | **Repository 抽象层** | ✅ **已全面生效**：列表与编辑器两个 ViewModel 都只依赖 `NoteRepository`，app 层已零 `NoteDao` 引用 |
-| 有效提交次数 | **7 次**（要求 ≥10）+ **1 次待提交**（置顶/归档） |
+| 有效提交次数 | **8 次**（要求 ≥10） |
 | 模拟器 | ✅ **`Pixel_10_Pro`（E 盘）** —— 见下方"模拟器环境"一节 |
 
 ---
@@ -92,7 +92,10 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 5 | `refactor(core): 引入NoteRepository抽象层，隔离UI与数据库实现` | `38eae52` | **核心代码** |
 | 6 | `feat(app): 整页笔记编辑器与长按删除` | `dba31ec` | **核心代码** |
 | 7 | `refactor(app): NoteViewModel改为依赖NoteRepository` | `8951ad8` | **核心代码**（纯机械替换，对外 API 不变） |
-| 8 | `feat(app): 笔记置顶/归档与可切换暗色主题` | **待提交** | **核心代码**（置顶归档 + 暗色主题合并为一次提交） |
+| 8 | `feat(app): 笔记置顶/归档与可切换暗色主题` | `eb10fab` | **核心代码**（两功能合并提交） |
+| 9 | `feat(core): Note实体加密字段 + 数据库迁移 + DAO支持` | **待提交** | **核心代码** |
+| 10 | `feat(core): AES-256-GCM加密引擎与密钥管理` | **待提交** | **核心代码 + 单元测试** |
+| 11 | `feat(app): 加密笔记界面与生物识别解锁` | **待提交** | **核心代码** |
 
 > **编号说明**：原计划编号与真实提交顺序在 #3 之后出现了偏移，
 > 因为 #3、#4 是仓库卫生与文档类提交，它们提前占用了序号。
@@ -106,10 +109,9 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 5 | `refactor(app): NoteViewModel改为依赖NoteRepository` | ✅ `8951ad8` |
 | 6 | `feat(app): 新增笔记置顶与归档功能` | ✅ **代码已完成，待提交** |
 | 7 | `feat(app): 适配暗色主题并完善列表视觉` | ✅ **代码已完成，与 #6 合并提交** |
-| 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ⬜ **下一步** |
-| 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ⬜ |
-| 9 | `feat(core): 实现笔记加密与密钥管理` | ⬜ |
-| 10 | `feat(app): 接入生物识别解锁与加密笔记界面` | ⬜ |
+| 8 | `feat(core): Note实体新增加密相关字段与DAO支持` | ✅ **代码已完成，待提交** |
+| 9 | `feat(core): 实现笔记加密与密钥管理` | ✅ **代码已完成，待提交** |
+| 10 | `feat(app): 接入生物识别解锁与加密笔记界面` | ✅ **代码已完成，待验收** |
 | 11 | `feat(app): 实现Markdown渲染器` | ⬜ |
 | 12 | `feat(app): 接入Markdown实时预览与草稿自动保存` | ⬜ |
 | 13 | `feat(core): 实现基于lastModified的LWW冲突解决机制` | ⬜ |
@@ -345,9 +347,9 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 > **一次成功重构的标志**：对外 API 没变、`MainActivity` 一行没改、行为完全一致。
 > 这次达到了 —— 只改了一个文件的内部实现。
 
-### 第 8 次提交（待提交）：笔记置顶与归档
+### 第 8 次提交 `eb10fab`：笔记置顶与归档 + 暗色主题
 
-> 状态：**代码已完成、编译通过、模拟器实测全部通过，等待用户确认后提交**
+> 状态：✅ **已提交并推送**（`eb10fab`，16 个文件，+575/-125 行）
 
 #### 为什么还要做"查看归档"视图
 
@@ -396,13 +398,10 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 
 截图见 `docs/screenshots/10-pinned.png`、`11-archived-view.png`。
 
-### 第 8 次提交（待提交）：置顶归档 + 暗色主题（合并提交）
+#### 暗色主题部分（与上同属第 8 次提交）
 
-> 状态：**两项功能均已完成、编译通过、模拟器实测通过，等待提交**
->
 > 说明：用户要求把"置顶/归档"和"暗色主题"合并为一次提交，
-> 因此本次提交包含两个功能。代价是提交次数少一次（8 而非 9），
-> 但后续还有 15+ 个提交点，不影响达标。
+> 因此 `eb10fab` 同时包含两个功能。
 
 #### 暗色主题：改了什么
 
@@ -453,6 +452,239 @@ dimens.xml / values-land / values-w600dp / values-w1240dp
 `version=13` 恰好反过来证明了版本号递增逻辑工作正常。
 
 **教训**：看到异常数据先确认"是否有人操作过"，再怀疑代码或环境。
+
+---
+
+### 第 9 次提交（待提交）：Note 加密字段 + 数据库迁移 + DAO 支持
+
+> 状态：**代码已完成、`:app:assembleDebug` 通过、schema 静态校验通过、
+> 运行时迁移已在真实设备上验证通过** ✅
+
+这是"笔记加密 + 生物识别"三步中的第一步，**只动数据层，不改 UI**。
+
+#### 改动文件
+
+| 文件 | 改动 |
+|---|---|
+| `core/.../entity/Note.kt` | 新增 `encryptedAt: Long`，标注 `@ColumnInfo(defaultValue = "0")` |
+| `core/.../NoteDatabase.kt` | 版本 1 → 2；新增 `MIGRATION_1_2` |
+| `core/.../DatabaseModule.kt` | 注册 `.addMigrations(MIGRATION_1_2)` |
+| `core/.../dao/NoteDao.kt` | 新增 `getEncryptedNotes()`、`getEncryptedNoteCount()`、`setEncryption()` |
+| `core/.../repository/NoteRepository.kt` | 接口新增对应三个方法 |
+| `core/.../repository/NoteRepositoryImpl.kt` | 实现委托给 DAO |
+| `core/schemas/.../2.json` | Room 自动导出的 v2 schema（已纳入版本控制） |
+
+#### 为什么复用 `content` 存密文，而不新开字段
+
+加密时把 `content` 从明文换成 `Base64(IV + AES-GCM 密文)`，`isEncrypted = true` 标记。
+这样列表、搜索、排序等既有逻辑完全不用改 —— 加密只是"同一字段的另一种编码"。
+
+#### 关键技术点：Room 迁移与 `@ColumnInfo(defaultValue)`
+
+**这是本次踩到的真实坑，值得记下来。**
+
+一开始只写了迁移 SQL：
+
+```kotlin
+db.execSQL("ALTER TABLE notes ADD COLUMN encryptedAt INTEGER NOT NULL DEFAULT 0")
+```
+
+但 Room 导出的 v2 schema 里，该字段的 `defaultValue` 是 `None`（因为 Kotlin 的
+`= 0L` 只是代码层默认值，Room 建表时不会写进 DDL）。于是：
+
+- SQLite 实际表结构：`encryptedAt INTEGER NOT NULL DEFAULT 0`
+- Room 期望的表结构：`encryptedAt INTEGER NOT NULL`
+
+两者不一致，Room 启动校验时会抛
+`IllegalStateException: Migration didn't properly handle: notes(...)`。
+
+**修法**：给字段加 `@ColumnInfo(defaultValue = "0")`，让实体侧也声明默认值。
+
+修正后静态校验结果：
+
+| 检查项 | 结果 |
+|---|---|
+| v2 新增字段 | `encryptedAt`（唯一新增） |
+| affinity | `INTEGER` |
+| notNull | `true` |
+| defaultValue | `"0"` |
+| 已有字段定义是否变化 | 无 |
+| 迁移 SQL 与实体定义是否一致 | ✅ 一致 |
+
+#### 为什么必须写 Migration，而不是只改 version
+
+`DatabaseModule` 里虽然保留了 `fallbackToDestructiveMigration()`，但它只在
+**找不到迁移**时才生效，后果是**删库重建、用户笔记全丢**。
+写了 `MIGRATION_1_2` 之后，升级时数据完整保留。
+
+#### 运行时迁移实测结果（已验证 ✅）
+
+模拟器上原本是 v1 数据库（含 `Dark-A`、`Dark-B` 两条笔记），
+从 Android Studio 运行新版 APK 后自动触发 1 → 2 迁移，结果：
+
+| 检查项 | 升级前 | 升级后 |
+|---|---|---|
+| `PRAGMA user_version` | 1 | **2** ✅ |
+| `notes` 表列 | 8 列（无 `encryptedAt`） | 9 列（**含 `encryptedAt`**）✅ |
+| 笔记数量 | 2 | **2**（未丢失）✅ |
+| `Dark-A` | pinned=1, version=2 | pinned=1, version=2（未变）✅ |
+| `Dark-B` | pinned=0, version=3 | pinned=0, version=3（未变）✅ |
+| `encryptedAt` 默认值 | — | 两条均为 **0** ✅ |
+| 崩溃 / 迁移异常 | — | **无**（`FATAL EXCEPTION`、`Migration didn't properly handle` 均未出现）✅ |
+
+> 验证方法：`adb exec-out run-as ... cat` 导出 db/wal/shm 三个文件后用 sqlite3 查询。
+> **注意**：MSYS2 bash 会把 `/data/data/...` 自动转换成 Windows 路径，
+> 必须先 `export MSYS2_ARG_CONV_EXCL='*'`，否则 `run-as` 找不到文件。
+
+---
+
+### 第 10 次提交（待提交）：AES-256-GCM 加密引擎与密钥管理
+
+> 状态：**代码已完成、编译通过、17 个单元测试全部通过；
+> 尚未接入 UI（第 11 次提交负责界面与生物识别）**
+
+#### 新增文件
+
+| 文件 | 作用 |
+|---|---|
+| `core/security/CryptoEngine.kt` | 纯逻辑 AES-256-GCM 加解密，**零 Android 依赖**，可在 JVM 上测 |
+| `core/security/CryptoManager.kt` | 密钥管理（EncryptedSharedPreferences + Android Keystore）+ Base64 编解码 |
+| `core/src/test/.../CryptoEngineTest.kt` | 17 个单元测试 |
+
+#### 修改文件
+
+| 文件 | 改动 |
+|---|---|
+| `NoteRepository.kt` | 新增 `encryptNote(note)`、`decryptNote(note)` |
+| `NoteRepositoryImpl.kt` | 注入 `CryptoManager`，实现两个方法 |
+
+#### 为什么拆成 Engine + Manager 两个类
+
+| 类 | 依赖 | 能否 JVM 单测 |
+|---|---|---|
+| `CryptoEngine` | 只用 `javax.crypto` / `java.security` | ✅ 能（17 个测试秒级跑完） |
+| `CryptoManager` | `EncryptedSharedPreferences`、`android.util.Base64` | ❌ 必须在设备上测 |
+
+这是本项目的分层原则：**把纯逻辑和平台依赖分开，纯逻辑就能被单元测试覆盖**。
+课设要求"单元测试覆盖率 ≥ 60%"，靠的就是这种拆法。
+
+#### 为什么选 AES-GCM 而不是 AES-CBC
+
+| | AES-CBC | AES-GCM |
+|---|---|---|
+| 机密性 | ✅ | ✅ |
+| 完整性/防篡改 | ❌ 需额外加 HMAC | ✅ 自带认证标签 |
+| 是否需要 padding | 需要 | 不需要 |
+
+GCM 能发现"密文被改动过"，CBC 不能。笔记被偷偷篡改是能想到的现实风险，所以选 GCM。
+
+#### 密钥怎么保护
+
+1. `MasterKey` 由 **Android Keystore** 生成并保管，密钥材料永不出 Keystore；
+2. 用这个主密钥加密 SharedPreferences 的键和值（`EncryptedSharedPreferences`）；
+3. 我们的 AES-256 数据密钥存在这个加密 prefs 里。
+
+即使把 prefs 文件拷走，没有 Keystore 里的主密钥也解不开。
+
+#### 输出格式
+
+```
+数据库里存的字符串 = Base64( IV(12字节) || AES-GCM 密文(含16字节认证标签) )
+```
+
+IV 直接拼在密文前面，解密时按固定长度切回来 —— **不需要额外的 IV 列**。
+
+#### 设计上的两个防御点
+
+1. **加密失败不改数据库**：宁可返回失败，也不出现"标记成已加密但内容是明文"的不一致状态
+2. **已加密的不重复加密**：`encryptNote` 遇到 `isEncrypted = true` 直接返回成功，
+   否则会把密文再加密一次，之后解密必然失败
+
+#### 实测证据
+
+**单元测试**：`gradlew :core:testDebugUnitTest` → 17 个用例全部通过（0 失败）
+
+覆盖场景：英文/中文/emoji/换行/空串/5 万字符长文本往返、IV 随机性、
+错误密钥返回 null、密文篡改返回 null、截断返回 null、IV 篡改返回 null、
+密钥长度校验、密钥生成随机性。
+
+**真实运行演示**（用编译产物直接跑，不依赖设备）：
+
+```
+原始明文 : 会议纪要：项目代号 Athena，口令 8f3k2x
+加密后长度: 78 字节 (IV 12 + 密文 66)
+入库字符串: gxF++lYuNGmr+ZlJyQ8CmUYkunoftPonLbahIYwNbgWswRJGt0OiK0nYnJiVTd681acnwPBvVFoC5omOli0fdZ//KJfs7hekkrlc/u+3
+解密还原 : 会议纪要：项目代号 Athena，口令 8f3k2x
+错误密钥解密: null
+篡改后解密  : null
+两次密文是否相同: false
+```
+
+#### 待验证（第 11 步一并完成）
+
+- [ ] UI 接入后，在设备上实际加密一条笔记并解锁查看
+- [ ] `EncryptedSharedPreferences` 在模拟器上的创建是否正常（代码已做异常降级）
+
+---
+
+### 第 11 次提交（待提交）：加密界面 + 生物识别解锁
+
+> 状态：**代码已完成、编译通过；待模拟器实测验收**
+
+这是加密功能**用户终于能看见**的一步。
+
+#### 改动文件
+
+| 文件 | 改动 |
+|---|---|
+| `app/build.gradle.kts` | 显式引入 `libs.androidx.biometric`（版本已在版本目录锁定，非新增依赖） |
+| `res/values/strings.xml` | 新增 14 条加密/生物识别文案 |
+| `NoteAdapter.kt` | 加密笔记不显示正文（避免露出 Base64 密文），改显示「🔒 已加密，解锁后查看」；徽章优先级 已加密 > 置顶 > 归档 |
+| `NoteViewModel.kt` | 新增 `encryptNote` / `removeEncryption` / `readDecryptedContent` |
+| `BiometricGate.kt`（新） | BiometricPrompt 统一封装 |
+| `MainActivity.kt` | 长按菜单加「加密笔记/取消加密」；点击加密笔记先验证身份再只读预览 |
+
+#### 用户视角的完整流程
+
+**加密**
+1. 长按笔记 → 菜单出现「加密笔记」
+2. 点击 → 正文被 AES-256-GCM 加密，数据库里 content 变成 Base64 密文
+3. 列表卡片正文变成「🔒 已加密，解锁后查看」，徽章显示「🔒 已加密」
+
+**查看**
+1. 点击加密笔记 → 弹出系统的指纹/锁屏密码验证
+2. 验证通过 → 弹出只读预览，显示解密后的正文
+3. 验证失败/取消 → 提示"身份验证未通过，无法查看内容"，**不泄露任何内容**
+
+**取消加密**
+1. 长按 → 「取消加密」→ 解密后以明文写回，恢复可编辑状态
+
+#### 关键设计决策：加密笔记为什么是只读预览，不进编辑器
+
+编辑器保存时写的是**明文**。如果允许直接编辑加密笔记，保存后就会出现
+`isEncrypted = true` 但 `content` 是明文的不一致状态，之后解密必然失败、甚至把密文覆盖掉。
+
+所以设计成：加密状态下只做**只读预览**；要编辑必须先「取消加密」。
+用一步额外操作换取数据一致性，这是刻意的取舍。
+
+#### 生物识别的两个细节
+
+1. **同时允许锁屏密码**（`BIOMETRIC_WEAK or DEVICE_CREDENTIAL`）
+   只允许指纹的话，用户指纹失灵（手湿、冬天干裂）就永远打不开自己的笔记了。
+   注意：允许 DEVICE_CREDENTIAL 时**不能**再调 `setNegativeButtonText`，否则抛异常。
+
+2. **先检查再弹出**（`canAuthenticate`）
+   设备没设置指纹/锁屏时，直接给"请先在系统设置里设置锁屏密码"的指引，
+   而不是弹一个必然失败的验证框。
+
+#### 待验收清单
+
+- [ ] 长按笔记出现「加密笔记」
+- [ ] 加密后列表正文变「🔒 已加密，解锁后查看」、徽章变「🔒 已加密」
+- [ ] 点击加密笔记弹出身份验证
+- [ ] 验证通过后看到解密正文
+- [ ] 取消加密后恢复可正常编辑
+- [ ] 数据库里 content 确实是 Base64 密文（用 sqlite3 查询验证）
 
 ---
 
@@ -554,24 +786,28 @@ adb -s emulator-5554 exec-out run-as com.example.mycoursedesign `
 
 ## 下一步（给接手者）
 
-**下一步：`feat(core): Note实体新增加密相关字段与DAO支持`（功能编号 #8）**
+**下一步：`feat(app): 接入生物识别解锁与加密笔记界面`（功能编号 #10）**
 
-这是"笔记加密 + 生物识别"三步中的第一步，**本步只加字段与数据层支持，不改 UI**，
-所以一定能独立编译通过：
+数据层与算法都已完成，下一步做**用户能看见的部分**：
 
-1. `Note` 实体目前已有 `isEncrypted` 字段（当初就预留了），确认是否需要补充
-   如 `encryptedContent` 或直接复用 `content` 存密文
-2. `NoteDao` 增加按 `isEncrypted` 过滤/统计的查询（若加密笔记需在列表中模糊显示）
-3. 编译验证 + 更新本文件 + **等用户确认后**提交
+1. 长按菜单增加「加密笔记 / 取消加密」两项
+   （`showNoteOptions()` 已是"数组 + actions"结构，追加即可）
+2. 加密后列表卡片正文显示「🔒 已加密，点击解锁」，不显示密文
+3. 点击加密笔记时，先用 `BiometricPrompt` 验证指纹/锁屏密码，
+   通过后再调用 `repository.decryptNote(note)` 取明文进入编辑器
+4. 列表卡片增加锁图标（`item_note.xml` 已有 `tvBadge` 可复用，或新增 `tvLock`）
+5. 忘记密码/指纹不可用时的降级提示
+6. 编译 + 模拟器实测（**指纹在模拟器上支持很弱，可能需要真机，或用锁屏密码兜底**）
+   + 更新本文件 + 等用户确认后提交
 
 **⚠️ 待提交内容（1 次提交，等用户确认）**：
 
-第 8 次：置顶归档 + 暗色主题（用户要求合并）
-- 新增：`res/menu/menu_main.xml`、`ThemePreferences.kt`
-- 修改：`NoteViewModel.kt`、`MainActivity.kt`、`MyApplication.kt`、
-  `activity_main.xml`、`strings.xml`
-- 截图：`docs/screenshots/10~16`（7 张）
-- 本文件与 `PROJECT_PLAN.md`
+第 9 次：Note 加密字段 + 数据库迁移 + DAO 支持
+- 修改：`Note.kt`、`NoteDatabase.kt`、`DatabaseModule.kt`、
+  `NoteDao.kt`、`NoteRepository.kt`、`NoteRepositoryImpl.kt`
+- 新增：`core/schemas/.../2.json`
+- 本文件
+- **待办**：运行时迁移实测（需用户先启动模拟器）
 
 **后续步骤（详见 `PROJECT_PLAN.md` 第 3 节）**：
 #8~#10 加密与生物识别 → #11~#12 Markdown 与自动保存 → #13 冲突解决

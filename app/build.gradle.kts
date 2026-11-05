@@ -56,6 +56,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
+    // 生物识别（指纹/锁屏密码）。版本已在 libs.versions.toml 中锁定，
+    // 且 core 模块也在用同一个库，这里只是让 app 模块也能直接调用 BiometricPrompt。
+    implementation(libs.androidx.biometric)
+
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

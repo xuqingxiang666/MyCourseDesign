@@ -143,6 +143,50 @@ class NoteViewModel @Inject constructor(
     }
 
     /**
+     * 加密一条笔记。
+     *
+     * @param onResult 在主线程回调；true 表示成功
+     *
+     * 加密成功后列表会通过 Flow 自动刷新：卡片正文变成「🔒 已加密，解锁后查看」。
+     */
+    fun encryptNote(note: Note, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            onResult(noteRepository.encryptNote(note))
+        }
+    }
+
+    /**
+     * 取消加密：先把密文解成明文，再以明文状态写回数据库。
+     *
+     * @param onResult true 表示解密并落库成功；false 表示解不开（密钥变更/数据损坏），
+     *        此时**数据库不做任何改动**，避免把损坏的数据覆盖成空内容
+     */
+    fun removeEncryption(note: Note, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val plaintext = noteRepository.decryptNote(note)
+            if (plaintext == null) {
+                onResult(false)
+            } else {
+                noteRepository.setEncryption(note.id, encrypted = false, content = plaintext)
+                onResult(true)
+            }
+        }
+    }
+
+    /**
+     * 读取加密笔记的明文（只读，不写库）。
+     *
+     * 供"通过身份验证后展示内容"使用。
+     *
+     * @param onResult 明文；解不开时为 null
+     */
+    fun readDecryptedContent(note: Note, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            onResult(noteRepository.decryptNote(note))
+        }
+    }
+
+    /**
      * 删除笔记。
      *
      * 删除后**不需要手动通知列表刷新**：`notes` 这个 StateFlow 会收到 Room 的数据变更

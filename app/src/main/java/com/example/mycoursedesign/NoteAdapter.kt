@@ -68,11 +68,19 @@ class NoteAdapter(
 
             // 标题/内容为空时显示占位文字，避免卡片看起来是空白的
             binding.tvTitle.text = note.title.ifBlank { context.getString(R.string.note_untitled) }
-            binding.tvContent.text =
-                note.content.ifBlank { context.getString(R.string.note_no_content) }
 
-            // 状态徽章：置顶优先显示，其次显示归档。
+            // ★ 加密笔记不显示正文。
+            // 因为加密后 content 存的是 Base64 密文，直接显示会是一串乱码。
+            // 改成固定的锁提示，用户点开并通过身份验证后才能看到明文。
+            binding.tvContent.text = when {
+                note.isEncrypted -> context.getString(R.string.note_encrypted_preview)
+                else -> note.content.ifBlank { context.getString(R.string.note_no_content) }
+            }
+
+            // 状态徽章优先级：已加密 > 已置顶 > 已归档
+            // （加密是最重要的状态，用户需要一眼看出这条笔记受保护）
             val badge = when {
+                note.isEncrypted -> context.getString(R.string.note_encrypted_badge)
                 note.isPinned -> context.getString(R.string.note_pinned_badge)
                 note.isArchived -> context.getString(R.string.note_archived_badge)
                 else -> null

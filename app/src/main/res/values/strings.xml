@@ -39,6 +39,23 @@
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
 
+    <!-- ==================== 加密 / 生物识别 ==================== -->
+    <string name="action_encrypt">加密笔记</string>
+    <string name="action_decrypt">取消加密</string>
+    <string name="note_encrypted_preview">\uD83D\uDD12 已加密，解锁后查看</string>
+    <string name="note_encrypted_badge">\uD83D\uDD12 已加密</string>
+    <string name="toast_encrypted">已加密，之后查看需要验证身份</string>
+    <string name="toast_encrypt_failed">加密失败，请重试</string>
+    <string name="toast_decrypted">已取消加密</string>
+    <string name="toast_decrypt_failed">无法解密：密钥可能已变更，或数据已损坏</string>
+    <string name="biometric_title">解锁加密笔记</string>
+    <string name="biometric_subtitle">请验证指纹或锁屏密码</string>
+    <string name="biometric_failed">身份验证未通过，无法查看内容</string>
+    <string name="biometric_unavailable">此设备未设置指纹或锁屏密码，暂时无法解锁加密笔记。\n\n请先在系统设置中设置锁屏密码后再试。</string>
+    <string name="preview_title">加密笔记（只读）</string>
+    <string name="preview_close">关闭</string>
+    <string name="preview_hint_edit">如需编辑，请先长按笔记选择「取消加密」。</string>
+
     <!-- ==================== 删除确认 ==================== -->
     <string name="delete_dialog_title">删除笔记</string>
     <string name="delete_dialog_message">确定删除「%1$s」吗？\n\n此操作不可恢复。</string>
