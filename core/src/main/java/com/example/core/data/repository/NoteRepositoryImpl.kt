@@ -2,6 +2,7 @@ package com.example.core.data.repository
 
 import com.example.core.data.dao.NoteDao
 import com.example.core.data.entity.Note
+import com.example.core.security.CryptoManager
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -23,7 +24,8 @@ import javax.inject.Inject
  * [com.example.core.di.RepositoryModule] 里的 `@Binds` 完成。
  */
 class NoteRepositoryImpl @Inject constructor(
-    private val noteDao: NoteDao
+    private val noteDao: NoteDao,
+    private val cryptoManager: CryptoManager
 ) : NoteRepository {
 
     // ==================== 查询 ====================
@@ -37,6 +39,10 @@ class NoteRepositoryImpl @Inject constructor(
     override suspend fun getNoteById(id: Long): Note? = noteDao.getNoteById(id)
 
     override suspend fun getNoteCount(): Int = noteDao.getNoteCount()
+
+    override fun observeEncryptedNotes(): Flow<List<Note>> = noteDao.getEncryptedNotes()
+
+    override suspend fun getEncryptedNoteCount(): Int = noteDao.getEncryptedNoteCount()
 
     // ==================== 写操作 ====================
 
@@ -72,6 +78,43 @@ class NoteRepositoryImpl @Inject constructor(
         noteDao.setArchived(id, archived)
 
     override suspend fun setPinned(id: Long, pinned: Boolean) = noteDao.setPinned(id, pinned)
+
+    /**
+     * 更新"正文 + 加密标记 + 加密时间"。
+     *
+     * 直接转交给 DAO 的 `@Transaction` 方法：三个字段要么一起改成功，
+     * 要么一起不改，避免出现"标记为已加密但内容是明文"的不一致状态。
+     */
+    override suspend fun setEncryption(id: Long, encrypted: Boolean, content: String) =
+        noteDao.setEncryption(id, encrypted, content)
+
+    /**
+     * 加密笔记正文。
+     *
+     * 设计要点：
+     * 1. **已经是加密状态就直接返回 true**，避免把密文再加密一次（那会导致二次解密失败）
+     * 2. 加密**失败时不改数据库**：宁可让用户看到"加密失败"，
+     *    也不要出现"标记成已加密但内容还是明文"的不一致状态
+     * 3. 落库走 DAO 的 `@Transaction` 方法，正文、标记、时间戳一起改
+     */
+    override suspend fun encryptNote(note: Note): Boolean {
+        if (note.isEncrypted) return true
+
+        val cipherText = cryptoManager.encrypt(note.content) ?: return false
+        noteDao.setEncryption(note.id, encrypted = true, newContent = cipherText)
+        return true
+    }
+
+    /**
+     * 读取笔记明文（只读）。
+     *
+     * 未加密的笔记直接返回原文；已加密的解不开就返回 null，
+     * 让 UI 显示"无法解密"而不是展示一堆 Base64 密文。
+     */
+    override suspend fun decryptNote(note: Note): String? {
+        if (!note.isEncrypted) return note.content
+        return cryptoManager.decrypt(note.content)
+    }
 
     override suspend fun deleteAllNotes() = noteDao.deleteAllNotes()
 }

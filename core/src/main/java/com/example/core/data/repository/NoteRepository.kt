@@ -52,6 +52,12 @@ interface NoteRepository {
     /** 笔记总数，用于空状态判断与测试断言。 */
     suspend fun getNoteCount(): Int
 
+    /** 观察所有已加密的笔记，供"加密笔记"视图使用。 */
+    fun observeEncryptedNotes(): Flow<List<Note>>
+
+    /** 已加密笔记数量。 */
+    suspend fun getEncryptedNoteCount(): Int
+
     // ==================== 写操作 ====================
 
     /**
@@ -76,6 +82,36 @@ interface NoteRepository {
 
     /** 设置置顶状态。 */
     suspend fun setPinned(id: Long, pinned: Boolean)
+
+    /**
+     * 一次性更新"正文 + 加密标记 + 加密时间"。
+     *
+     * 加密/解密是三步改动的原子操作，调用方不应自己拼 `updateNote(note.copy(...))`，
+     * 否则容易漏改 `encryptedAt` 或忘记递增 `version`，导致数据不一致。
+     *
+     * @param id 笔记主键
+     * @param encrypted 操作后是否加密
+     * @param content 操作后的正文（加密时为密文，解密时为明文）
+     */
+    suspend fun setEncryption(id: Long, encrypted: Boolean, content: String)
+
+    /**
+     * 加密一条笔记：把正文换成密文，并标记 `isEncrypted = true`。
+     *
+     * @return true 表示成功；false 表示密钥不可用或加密失败（此时数据库**不做任何改动**）
+     */
+    suspend fun encryptNote(note: Note): Boolean
+
+    /**
+     * 读取一条笔记的明文。
+     *
+     * - 未加密的笔记：直接返回 `content`
+     * - 已加密的笔记：解密后返回明文；解密失败返回 null
+     *
+     * **只读**，不会修改数据库。要在 UI 上"取消加密"时，
+     * 调用方拿到明文后再自行调用 [setEncryption] 落库。
+     */
+    suspend fun decryptNote(note: Note): String?
 
     /** 清空全部笔记，仅测试使用。 */
     suspend fun deleteAllNotes()

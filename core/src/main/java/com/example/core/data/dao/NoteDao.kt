@@ -57,6 +57,19 @@ interface NoteDao {
     @Query("SELECT COUNT(*) FROM notes")
     suspend fun getNoteCount(): Int
 
+    /**
+     * 观察所有已加密的笔记。
+     *
+     * 加密功能需要一个"已加密笔记"的独立入口：主列表里加密笔记只显示标题和锁图标，
+     * 正文要解锁后才可读。这个查询供后续的"加密笔记"视图使用。
+     */
+    @Query("SELECT * FROM notes WHERE isEncrypted = 1 ORDER BY lastModified DESC")
+    fun getEncryptedNotes(): Flow<List<Note>>
+
+    /** 统计已加密的笔记数量，用于设置页显示"已保护 N 条笔记"。 */
+    @Query("SELECT COUNT(*) FROM notes WHERE isEncrypted = 1")
+    suspend fun getEncryptedNoteCount(): Int
+
     // ==================== 增删改 ====================
 
     /**
@@ -118,6 +131,39 @@ interface NoteDao {
                 note.copy(
                     isPinned = pinned,
                     lastModified = System.currentTimeMillis(),
+                    version = note.version + 1
+                )
+            )
+        }
+    }
+
+    /**
+     * 一次性完成"改内容 + 改加密标记 + 记录加密时间"。
+     *
+     * @param id 笔记主键
+     * @param encrypted 操作后是否处于加密状态
+     * @param newContent 操作后的正文：加密时传密文，解密时传明文
+     *
+     * 【为什么必须放在一个 @Transaction 里】
+     * 加密/解密同时要改三个字段（content、isEncrypted、encryptedAt），
+     * 如果分三次 update，中间任意一刻崩溃或被杀进程，数据库就会停在
+     * "标记为已加密但内容是明文"这类**不一致状态**，之后解密会失败、甚至污染数据。
+     * 包进事务后，要么三个字段全改成功，要么全都不改。
+     *
+     * 时间戳 `encryptedAt` 的含义：
+     * - 加密时写入当前时间，供 UI 显示"加密于 X"
+     * - 解密时归零，表示这条笔记已不再受保护
+     */
+    @Transaction
+    suspend fun setEncryption(id: Long, encrypted: Boolean, newContent: String) {
+        getNoteById(id)?.let { note ->
+            val now = System.currentTimeMillis()
+            updateNote(
+                note.copy(
+                    content = newContent,
+                    isEncrypted = encrypted,
+                    encryptedAt = if (encrypted) now else 0L,
+                    lastModified = now,
                     version = note.version + 1
                 )
             )

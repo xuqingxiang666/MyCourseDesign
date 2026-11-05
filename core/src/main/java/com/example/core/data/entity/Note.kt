@@ -1,5 +1,6 @@
 package com.example.core.data.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -36,8 +37,39 @@ data class Note(
     /** 是否置顶。置顶的笔记排在列表最前面。 */
     val isPinned: Boolean = false,
 
-    /** 内容是否已加密（阶段 5 使用）。加密时 [content] 存放的是密文。 */
+    /**
+     * 内容是否已加密。
+     *
+     * 为 true 时，[content] 里存放的不是明文，而是
+     * `Base64(IV + AES-GCM 密文)` 形式的字符串。
+     * 之所以复用 [content] 而不另开一个字段，是为了让"加密/解密"变成
+     * 同一字段的两种编码，列表、搜索、排序等既有逻辑都不需要改动。
+     */
     val isEncrypted: Boolean = false,
+
+    /**
+     * 加密时间戳（毫秒）。`0` 表示从未加密过。
+     *
+     * 用途有两个：
+     * 1. UI 上显示"加密于 X 月 X 日"，让用户知道这条笔记处于保护状态；
+     * 2. 解密时可以判断"密文是不是在这次修改之前产生的"，
+     *    避免把刚编辑过的新明文误当成旧密文。
+     *
+     * 数据库版本 1 → 2 时新增此列（见 `NoteDatabase.MIGRATION_1_2`）。
+     *
+     * 【★ 为什么必须写 @ColumnInfo(defaultValue = "0")】
+     * Kotlin 里的 `= 0L` 只是**代码层**的默认值，Room 建表时并不会把它写进 DDL。
+     * 而迁移用的 `ALTER TABLE ... ADD COLUMN ... NOT NULL DEFAULT 0` 会在
+     * SQLite 里真的留下 `DEFAULT 0`。
+     *
+     * Room 启动时会比对"实体声明的表结构"和"迁移后实际得到的表结构"，
+     * `defaultValue` 对不上就抛：
+     *     IllegalStateException: Migration didn't properly handle: notes(...)
+     * 所以必须用 `@ColumnInfo(defaultValue = "0")` 让**实体侧也声明默认值**，
+     * 两边才能一致。这是 Room 迁移里最容易被忽略的细节之一。
+     */
+    @ColumnInfo(defaultValue = "0")
+    val encryptedAt: Long = 0L,
 
     /**
      * 最后修改时间戳（毫秒）。

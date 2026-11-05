@@ -48,8 +48,12 @@ object DatabaseModule {
             NoteDatabase::class.java,
             NoteDatabase.DATABASE_NAME
         )
-            // 版本号变化时直接删库重建，而不是崩溃。
-            // 【注意】这是课设阶段的简化做法；生产环境应改用 Migration 保留用户数据。
+            // 显式注册迁移：1 → 2 给 notes 表增加 encryptedAt 列。
+            // 有了迁移，版本升级时**用户数据会完整保留**。
+            .addMigrations(NoteDatabase.MIGRATION_1_2)
+            // 兜底策略：如果将来出现没写迁移的版本跳跃（例如直接从 1 跳到 3），
+            // Room 不会崩溃，而是删库重建。
+            // 【注意】这意味着那种情况下数据会丢，所以**每次改 schema 都必须补迁移**。
             .fallbackToDestructiveMigration()
             .build()
 
