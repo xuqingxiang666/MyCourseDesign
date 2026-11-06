@@ -39,6 +39,13 @@
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
 
+    <!-- ==================== Markdown 预览 / 草稿 ==================== -->
+    <string name="action_preview">预览</string>
+    <string name="action_edit">编辑</string>
+    <string name="draft_saved_at">草稿已自动保存 %1$s</string>
+    <string name="preview_empty">暂无内容可预览</string>
+    <string name="toast_saved_auto">已自动保存</string>
+
     <!-- ==================== 加密 / 生物识别 ==================== -->
     <string name="action_encrypt">加密笔记</string>
     <string name="action_decrypt">取消加密</string>

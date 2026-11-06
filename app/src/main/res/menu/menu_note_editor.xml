@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 编辑器顶部工具栏的菜单：只放一个「保存」 -->
+<!--
+  编辑器顶部工具栏菜单。
+
+  - 预览/编辑：在「纯文本输入」和「Markdown 渲染效果」之间切换
+  - 保存：立即落库并返回（平时内容已由草稿自动保存写入数据库）
+-->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_toggle_preview"
+        android:title="@string/action_preview"
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_save"

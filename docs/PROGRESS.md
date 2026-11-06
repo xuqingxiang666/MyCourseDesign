@@ -96,7 +96,8 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 9 | `feat(core): Note实体加密字段 + 数据库迁移 + DAO支持` | **待提交** | **核心代码** |
 | 10 | `feat(core): AES-256-GCM加密引擎与密钥管理` | **待提交** | **核心代码 + 单元测试** |
 | 11 | `feat(app): 加密笔记界面与生物识别解锁` | `811b293` | **核心代码** |
-| 12 | `feat(app): Markdown渲染器（解析器+渲染器+27个单测）` | **待提交** | **核心代码 + 单元测试** |
+| 12 | `feat(app): Markdown渲染器（解析器+渲染器+27个单测）` | `a7c38e7` | **核心代码 + 单元测试** |
+| 13 | `feat(app): Markdown实时预览与草稿自动保存` | **待提交** | **核心代码（必做特色）** |
 
 > **编号说明**：原计划编号与真实提交顺序在 #3 之后出现了偏移，
 > 因为 #3、#4 是仓库卫生与文档类提交，它们提前占用了序号。
@@ -114,7 +115,7 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 9 | `feat(core): 实现笔记加密与密钥管理` | ✅ **代码已完成，待提交** |
 | 10 | `feat(app): 接入生物识别解锁与加密笔记界面` | ✅ **代码已完成，待验收** |
 | 11 | `feat(app): 实现Markdown渲染器` | ✅ **代码已完成，待提交** |
-| 12 | `feat(app): 接入Markdown实时预览与草稿自动保存` | ⬜ |
+| 12 | `feat(app): 接入Markdown实时预览与草稿自动保存` | ✅ **代码已完成，待提交** |
 | 13 | `feat(core): 实现基于lastModified的LWW冲突解决机制` | ⬜ |
 | 14 | `feat(sharecard): 定义P4插件对外契约与入口` | ⬜ |
 | 15 | `feat(sharecard): 实现分享卡片Bitmap绘制` | ⬜ |
@@ -768,6 +769,75 @@ IV 直接拼在密文前面，解密时按固定长度切回来 —— **不需�
 - [ ] 编辑器里输入 Markdown 能实时看到富文本效果
 - [ ] 暗色模式下链接色、代码底色是否协调
 - [ ] 列表卡片预览是否已去掉标记符号
+
+---
+
+### 第 13 次提交（待提交）：Markdown 实时预览 + 草稿自动保存
+
+> 状态：**代码已完成、编译通过、模拟器端到端实测通过（含截图）**
+>
+> 这是课设**必做项「Markdown 实时渲染」真正完成**的标志 —— 上一提交只是渲染器，
+> 本提交把它接进界面，并且补上「草稿自动保存」。
+
+#### 改动文件
+
+| 文件 | 改动 |
+|---|---|
+| `NoteEditorViewModel.kt` | `noteId` 改为可变；新增 `autoSave()`；`persist()` 统一两条保存路径；新增 `lastAutoSavedAt` 状态 |
+| `NoteEditorActivity.kt` | 预览/编辑切换、`TextWatcher` + 600ms 防抖、工具栏副标题显示保存时间 |
+| `res/layout/activity_note_editor.xml` | 新增 `NestedScrollView` + `tvPreview` 预览区（与输入区同位置，二选一显示） |
+| `res/menu/menu_note_editor.xml` | 新增「预览 / 编辑」菜单项 |
+| `NoteAdapter.kt` | 列表卡片正文改用 `MarkdownParser.toPlainText()`，去掉 `**` 等符号 |
+| `res/values/strings.xml` | 新增 5 条文案 |
+
+#### 草稿自动保存的实现
+
+```
+用户输入 → TextWatcher.afterTextChanged
+        → 取消上一个 Job，重新 delay(600ms)
+        → 600ms 内无新输入 → viewModel.autoSave() → 写 Room
+        → 成功后更新 lastAutoSavedAt → 工具栏副标题「草稿已自动保存 10:58:27」
+```
+
+**这是防抖（debounce）**：连续打字时不会每敲一个字写一次库。
+
+#### 三个设计要点
+
+1. **`noteId` 必须是可变字段**
+   新建笔记第一次自动保存时才真正插入数据库并拿到 id。如果保持 `val`，
+   每次自动保存都会新建一条重复笔记。
+
+2. **内容未变则跳过写库**
+   `persist()` 里比较 `existing.title/content` 与新内容，相同就直接返回成功。
+   否则用户每停一次输入就会把 `version` 无意义地刷高 —— 而 `version` 是后面
+   "冲突解决机制"判断数据新旧的依据，被污染会导致误判。
+
+3. **切换预览前先落库一次**
+   保证预览显示的是最新内容，同时取消待执行的自动保存任务，避免切换瞬间重复写库。
+
+#### 端到端实测结果（模拟器，全部通过）
+
+| 步骤 | 操作 | 结果 |
+|---|---|---|
+| 1 | 新建笔记，输入 `# Meeting Notes` 等 5 行 Markdown | ✅ 输入正常 |
+| 2 | 不点保存，等待输入停顿 | ✅ 工具栏出现「**草稿已自动保存 02:58:27**」 |
+| 3 | 点「预览」 | ✅ 按钮变「编辑」；渲染结果：标题变大加粗、`bold text` 加粗、`italic` 斜体、列表加 `•`、引用加 `▎` 且变淡、所有 `#/*/-/>` 符号消失 |
+| 4 | 返回列表 | ✅ 卡片正文显示纯文本（`• item one` 等），无 Markdown 符号 |
+| 5 | 查数据库 | ✅ 笔记已入库（**未点保存按钮**），`version=4`，`content` 保留原始 Markdown |
+
+截图：`21-markdown-edit.png`（编辑态）、`22-markdown-preview.png`（预览态）、
+`23-markdown-list-preview.png`（列表纯文本预览）。
+
+#### 测试中遇到的一个坑（已解决）
+
+用 `adb shell input text '# Meeting Notes'` 输入 Markdown 时，`#` 被设备端 shell
+当成注释、`>` 被当成重定向（报 `can't create quoted: Read-only file system`）。
+正确写法是把整个命令作为一个字符串传入，让引号在设备端生效：
+
+```bash
+adb shell "input text '# Meeting Notes'"
+adb shell "input text '> quoted line'"
+```
 
 ---
 

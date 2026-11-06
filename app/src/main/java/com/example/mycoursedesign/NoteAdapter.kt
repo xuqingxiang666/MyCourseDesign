@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.core.data.entity.Note
+import com.example.mycoursedesign.markdown.MarkdownParser
 import com.example.mycoursedesign.databinding.ItemNoteBinding
 
 /**
@@ -74,7 +75,13 @@ class NoteAdapter(
             // 改成固定的锁提示，用户点开并通过身份验证后才能看到明文。
             binding.tvContent.text = when {
                 note.isEncrypted -> context.getString(R.string.note_encrypted_preview)
-                else -> note.content.ifBlank { context.getString(R.string.note_no_content) }
+                else -> {
+                    // 列表预览去掉 Markdown 标记（**粗体** -> 粗体），
+                    // 否则卡片上会出现一堆符号。
+                    // 截取前 300 个字符再解析，避免长笔记在滚动时反复做全量解析。
+                    MarkdownParser.toPlainText(note.content.take(300))
+                        .ifBlank { context.getString(R.string.note_no_content) }
+                }
             }
 
             // 状态徽章优先级：已加密 > 已置顶 > 已归档

@@ -101,4 +101,36 @@
         app:layout_constraintTop_toBottomOf="@id/divider"
         tools:ignore="LabelFor" />
 
+    <!--
+      Markdown 预览区。
+
+      和 etContent 占据完全相同的约束位置，但同一时刻只显示一个：
+      点工具栏「预览」时 etContent 隐藏、本视图显示，再点一次切回编辑。
+
+      用 NestedScrollView 包裹，是因为渲染后的内容可能远高于屏幕，
+      需要能滚动查看。TextView 自身不滚动。
+    -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollPreview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="20dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider">
+
+        <TextView
+            android:id="@+id/tvPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingMultiplier="1.25"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorLink="?attr/colorPrimary"
+            android:textIsSelectable="true"
+            android:textSize="16sp"
+            tools:text="预览内容" />
+    </androidx.core.widget.NestedScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
