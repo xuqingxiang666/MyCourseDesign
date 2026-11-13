@@ -14,6 +14,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.mycoursedesign.databinding.ActivityNoteEditorBinding
+import com.example.mycoursedesign.markdown.MarkdownFormatter
 import com.example.mycoursedesign.markdown.MarkdownRenderer
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
@@ -93,6 +94,7 @@ class NoteEditorActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupToolbar()
+        setupFormatBar()
         setupAutoSave()
         observeNote()
         observeDraftState()
@@ -144,11 +146,13 @@ class NoteEditorActivity : AppCompatActivity() {
             )
             renderPreview()
             binding.etContent.visibility = View.GONE
+            binding.formatBar.visibility = View.GONE
             binding.scrollPreview.visibility = View.VISIBLE
             binding.toolbar.menu.findItem(R.id.action_toggle_preview)?.title =
                 getString(R.string.action_edit)
         } else {
             binding.scrollPreview.visibility = View.GONE
+            binding.formatBar.visibility = View.VISIBLE
             binding.etContent.visibility = View.VISIBLE
             binding.toolbar.menu.findItem(R.id.action_toggle_preview)?.title =
                 getString(R.string.action_preview)
@@ -165,6 +169,70 @@ class NoteEditorActivity : AppCompatActivity() {
             // 让 [ ](链接) 生成的 URLSpan 可以点击
             binding.tvPreview.movementMethod = LinkMovementMethod.getInstance()
         }
+    }
+
+    // ==================== 格式工具栏 ====================
+
+    /**
+     * 绑定格式按钮。
+     *
+     * 【设计要点：按钮只改文本，不产生富文本对象】
+     * 每个按钮最终都调用 [applyFormat]，把"当前文本 + 选区"交给
+     * [MarkdownFormatter] 的纯函数处理，拿回"新文本 + 新选区"再写回输入框。
+     *
+     * 好处：
+     * 1. 数据库仍存 Markdown 纯文本 —— 不需要改表结构、不需要数据迁移
+     * 2. 逻辑全部可单元测试（21 个用例已覆盖）
+     * 3. 写回文本会触发 TextWatcher，草稿自动保存自动接手
+     */
+    private fun setupFormatBar() {
+        binding.btnBold.setOnClickListener {
+            applyFormat(MarkdownFormatter::toggleBold)
+        }
+        binding.btnItalic.setOnClickListener {
+            applyFormat(MarkdownFormatter::toggleItalic)
+        }
+        binding.btnStrike.setOnClickListener {
+            applyFormat(MarkdownFormatter::toggleStrikethrough)
+        }
+        binding.btnCode.setOnClickListener {
+            applyFormat(MarkdownFormatter::toggleInlineCode)
+        }
+        binding.btnBullet.setOnClickListener {
+            applyFormat(MarkdownFormatter::toggleBullet)
+        }
+        binding.btnOrdered.setOnClickListener {
+            applyFormat(MarkdownFormatter::toggleOrdered)
+        }
+    }
+
+    /**
+     * 执行一次格式化：取出选区 → 纯函数变换 → 写回并恢复选区。
+     *
+     * 恢复选区很关键：如果只 setText 不设 selection，光标会跳到文首，
+     * 用户每点一次按钮就要重新定位，体验极差。
+     */
+    private fun applyFormat(
+        transform: (String, Int, Int) -> MarkdownFormatter.Result
+    ) {
+        val edit = binding.etContent
+        val text = edit.text.toString()
+
+        // 选区越界（比如 text 被外部改过）时兜底到末尾
+        val start = edit.selectionStart.coerceIn(0, text.length)
+        val end = edit.selectionEnd.coerceIn(start, text.length)
+
+        val result = transform(text, start, end)
+        if (result.text == text) return
+
+        edit.setText(result.text)
+        // setText 会把光标重置到开头，所以必须在之后设置选区
+        edit.setSelection(
+            result.selectionStart.coerceIn(0, result.text.length),
+            result.selectionEnd.coerceIn(0, result.text.length)
+        )
+        // 让输入框保持焦点，键盘不会因点按钮而收起
+        edit.requestFocus()
     }
 
     // ==================== 草稿自动保存 ====================

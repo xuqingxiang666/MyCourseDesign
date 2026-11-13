@@ -95,11 +95,110 @@
         android:textColor="?attr/colorOnSurface"
         android:textColorHint="?attr/colorOnSurfaceVariant"
         android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/formatBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/divider"
         tools:ignore="LabelFor" />
+
+    <!--
+      格式工具栏：模拟 Office 的"选中文字 -> 点按钮加粗"体验。
+
+      注意：按钮**不产生富文本对象**，只是在选中文字两侧插入/移除 Markdown 标记
+      （例如点 B 就是加 `**`）。所以数据库里存的仍然是纯文本，
+      之前的解析器、渲染器、27 个测试全部继续有效。
+
+      预览模式下整条工具栏会隐藏（预览不需要编辑操作）。
+    -->
+    <LinearLayout
+        android:id="@+id/formatBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="2dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBold"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="粗体"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="B"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnItalic"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="斜体"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="I"
+            android:textStyle="italic" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStrike"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="删除线"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="S" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCode"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="行内代码"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="&lt;/&gt;"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBullet"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="无序列表"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="•" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOrdered"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="有序列表"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="1." />
+    </LinearLayout>
 
     <!--
       Markdown 预览区。
