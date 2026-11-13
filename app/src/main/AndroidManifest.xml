@@ -47,6 +47,14 @@
             android:parentActivityName=".MainActivity"
             android:theme="@style/Theme.MyCourseDesign"
             android:windowSoftInputMode="adjustResize" />
+        <!--
+          模拟同步演示页：用于答辩时展示"离线-同步冲突解决机制"。
+          不对外导出（exported=false），只能从 App 内部打开。
+        -->
+        <activity
+            android:name=".SyncDemoActivity"
+            android:exported="false"
+            android:label="@string/sync_demo_title" />
     </application>
 
 </manifest>

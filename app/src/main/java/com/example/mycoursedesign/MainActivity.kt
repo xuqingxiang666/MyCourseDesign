@@ -92,6 +92,11 @@ class MainActivity : AppCompatActivity() {
                     showThemeDialog()
                     true
                 }
+                R.id.action_sync_demo -> {
+                    // 打开"模拟同步演示"页，用于展示离线-同步冲突解决机制
+                    startActivity(SyncDemoActivity.newIntent(this))
+                    true
+                }
                 else -> false
             }
         }

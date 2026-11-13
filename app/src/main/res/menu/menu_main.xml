@@ -23,4 +23,9 @@
         android:title="@string/action_theme"
         app:showAsAction="never" />
 
+
+    <item
+        android:id="@+id/action_sync_demo"
+        android:title="@string/action_sync_demo"
+        app:showAsAction="never" />
 </menu>

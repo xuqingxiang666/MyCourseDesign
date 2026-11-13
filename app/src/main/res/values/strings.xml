@@ -46,6 +46,16 @@
     <string name="preview_empty">暂无内容可预览</string>
     <string name="toast_saved_auto">已自动保存</string>
 
+    <!-- ==================== 同步演示 ==================== -->
+    <string name="sync_demo_title">模拟同步演示</string>
+    <string name="sync_demo_counts">本地 %1$d 条（已删除 %2$d 条）｜ 云端 %3$d 条</string>
+    <string name="sync_demo_seed">① 初始化云端（把本地推上去）</string>
+    <string name="sync_demo_sim_edit">② 模拟另一台设备修改</string>
+    <string name="sync_demo_sim_delete">③ 模拟另一台设备删除</string>
+    <string name="sync_demo_run">④ 立即同步</string>
+    <string name="sync_demo_reset">重置云端</string>
+    <string name="action_sync_demo">同步演示</string>
+
     <!-- ==================== 加密 / 生物识别 ==================== -->
     <string name="action_encrypt">加密笔记</string>
     <string name="action_decrypt">取消加密</string>
