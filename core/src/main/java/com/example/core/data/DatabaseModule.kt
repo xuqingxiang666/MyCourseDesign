@@ -3,6 +3,7 @@ package com.example.core.data
 import android.content.Context
 import androidx.room.Room
 import com.example.core.data.dao.NoteDao
+import com.example.core.data.dao.RemoteNoteDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -50,7 +51,7 @@ object DatabaseModule {
         )
             // 显式注册迁移：1 → 2 给 notes 表增加 encryptedAt 列。
             // 有了迁移，版本升级时**用户数据会完整保留**。
-            .addMigrations(NoteDatabase.MIGRATION_1_2)
+            .addMigrations(NoteDatabase.MIGRATION_1_2, NoteDatabase.MIGRATION_2_3)
             // 兜底策略：如果将来出现没写迁移的版本跳跃（例如直接从 1 跳到 3），
             // Room 不会崩溃，而是删库重建。
             // 【注意】这意味着那种情况下数据会丢，所以**每次改 schema 都必须补迁移**。
@@ -65,4 +66,16 @@ object DatabaseModule {
      */
     @Provides
     fun provideNoteDao(database: NoteDatabase): NoteDao = database.noteDao()
+
+    /**
+     * 提供"云端"笔记表的 DAO。
+     *
+     * ★ 新增 DAO 时**必须**在这里补一个 @Provides，否则 Hilt 会报：
+     *     [Dagger/MissingBinding] RemoteNoteDao cannot be provided
+     *      without an @Provides-annotated method
+     * 因为 Room 生成的 DAO 实现类不在我们代码里，Hilt 无法自己推断怎么创建它，
+     * 只能由我们显式声明"从 Database 里取"。
+     */
+    @Provides
+    fun provideRemoteNoteDao(database: NoteDatabase): RemoteNoteDao = database.remoteNoteDao()
 }

@@ -33,11 +33,11 @@ interface NoteDao {
      *
      * 排序规则：置顶的排在前面；同为置顶或同为非置顶时，按最后修改时间倒序（最新的在最上面）。
      */
-    @Query("SELECT * FROM notes WHERE isArchived = 0 ORDER BY isPinned DESC, lastModified DESC")
+    @Query("SELECT * FROM notes WHERE isArchived = 0 AND isDeleted = 0 ORDER BY isPinned DESC, lastModified DESC")
     fun getActiveNotes(): Flow<List<Note>>
 
     /** 获取已归档的笔记，按修改时间倒序。 */
-    @Query("SELECT * FROM notes WHERE isArchived = 1 ORDER BY lastModified DESC")
+    @Query("SELECT * FROM notes WHERE isArchived = 1 AND isDeleted = 0 ORDER BY lastModified DESC")
     fun getArchivedNotes(): Flow<List<Note>>
 
     /**
@@ -46,7 +46,7 @@ interface NoteDao {
      * 供 P4 分享卡片模块导出 CSV、批量生成卡片时使用 —— 那里需要的是"当前快照"，
      * 不需要持续观察数据变化。
      */
-    @Query("SELECT * FROM notes ORDER BY lastModified DESC")
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 ORDER BY lastModified DESC")
     suspend fun getAllNotesOnce(): List<Note>
 
     /** 按主键查询单条笔记，不存在时返回 null。 */
@@ -54,7 +54,7 @@ interface NoteDao {
     suspend fun getNoteById(id: Long): Note?
 
     /** 统计笔记总数，单元测试与 UI 空状态判断使用。 */
-    @Query("SELECT COUNT(*) FROM notes")
+    @Query("SELECT COUNT(*) FROM notes WHERE isDeleted = 0")
     suspend fun getNoteCount(): Int
 
     /**
@@ -63,11 +63,11 @@ interface NoteDao {
      * 加密功能需要一个"已加密笔记"的独立入口：主列表里加密笔记只显示标题和锁图标，
      * 正文要解锁后才可读。这个查询供后续的"加密笔记"视图使用。
      */
-    @Query("SELECT * FROM notes WHERE isEncrypted = 1 ORDER BY lastModified DESC")
+    @Query("SELECT * FROM notes WHERE isEncrypted = 1 AND isDeleted = 0 ORDER BY lastModified DESC")
     fun getEncryptedNotes(): Flow<List<Note>>
 
     /** 统计已加密的笔记数量，用于设置页显示"已保护 N 条笔记"。 */
-    @Query("SELECT COUNT(*) FROM notes WHERE isEncrypted = 1")
+    @Query("SELECT COUNT(*) FROM notes WHERE isEncrypted = 1 AND isDeleted = 0")
     suspend fun getEncryptedNoteCount(): Int
 
     // ==================== 增删改 ====================
@@ -96,6 +96,36 @@ interface NoteDao {
     /** 清空整张表，仅测试使用。 */
     @Query("DELETE FROM notes")
     suspend fun deleteAllNotes()
+
+    // ==================== 软删除与同步支持 ====================
+
+    /**
+     * 取出**包含已删除**的全部笔记。
+     *
+     * 专供同步使用：冲突解决必须看到"本地删掉了哪些"，否则无法判断
+     * 那条笔记是"本地删了"还是"远端新建的"。UI 层不要用这个方法。
+     */
+    @Query("SELECT * FROM notes ORDER BY lastModified DESC")
+    suspend fun getAllNotesIncludingDeleted(): List<Note>
+
+    /**
+     * 软删除一条笔记。
+     *
+     * 【为什么不直接 DELETE】
+     * 同步时需要区分"本地删了"和"本地从没有过"。真正的 DELETE 会让这个信息消失，
+     * 导致远端那条笔记被当成新数据重新下载回来（删了又复活）。
+     *
+     * 同时更新 `lastModified` 与 `version`：删除也是一次"修改"，
+     * 必须参与 LWW 比较，否则"删除"和"他端修改"无法判先后。
+     *
+     * `WHERE isDeleted = 0` 保证重复删除不会把 deletedAt 越刷越晚。
+     */
+    @Query(
+        "UPDATE notes SET isDeleted = 1, deletedAt = :now, " +
+            "lastModified = :now, version = version + 1 " +
+            "WHERE id = :id AND isDeleted = 0"
+    )
+    suspend fun softDelete(id: Long, now: Long)
 
     // ==================== 状态切换 ====================
     //

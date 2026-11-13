@@ -1,5 +1,7 @@
 package com.example.core.di
 
+import com.example.core.data.remote.LocalRemoteDataSource
+import com.example.core.data.remote.RemoteDataSource
 import com.example.core.data.repository.NoteRepository
 import com.example.core.data.repository.NoteRepositoryImpl
 import dagger.Binds
@@ -54,4 +56,17 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNoteRepository(impl: NoteRepositoryImpl): NoteRepository
+
+    /**
+     * 把"云端"数据源绑定到本地模拟实现。
+     *
+     * ★ 这个绑定就是"将来能换成真服务器"的开关：
+     * 只要把 [LocalRemoteDataSource] 换成 `HttpRemoteDataSource`，
+     * 其余代码（冲突判定、同步引擎、界面）**一行都不用改**。
+     *
+     * 演示时不联网也能跑完整套冲突解决流程，靠的就是这一层抽象。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindRemoteDataSource(impl: LocalRemoteDataSource): RemoteDataSource
 }

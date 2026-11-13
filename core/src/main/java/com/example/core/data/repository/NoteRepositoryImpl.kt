@@ -2,6 +2,7 @@ package com.example.core.data.repository
 
 import com.example.core.data.dao.NoteDao
 import com.example.core.data.entity.Note
+import com.example.core.data.entity.RemoteNote
 import com.example.core.security.CryptoManager
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -70,7 +71,14 @@ class NoteRepositoryImpl @Inject constructor(
 
     override suspend fun updateNote(note: Note) = noteDao.updateNote(note)
 
-    override suspend fun deleteNote(note: Note) = noteDao.deleteNote(note)
+    /**
+     * 删除笔记（软删除）。
+     *
+     * 只打标记不真删 —— 详见 [Note.isDeleted]。时间戳由 Repository 统一生成，
+     * 保证"删除"和"修改"用的是同一套时间基准，LWW 比较才有意义。
+     */
+    override suspend fun deleteNote(note: Note) =
+        noteDao.softDelete(note.id, System.currentTimeMillis())
 
     override suspend fun deleteNoteById(id: Long) = noteDao.deleteNoteById(id)
 
@@ -114,6 +122,42 @@ class NoteRepositoryImpl @Inject constructor(
     override suspend fun decryptNote(note: Note): String? {
         if (!note.isEncrypted) return note.content
         return cryptoManager.decrypt(note.content)
+    }
+
+    override suspend fun getAllNotesIncludingDeleted(): List<Note> =
+        noteDao.getAllNotesIncludingDeleted()
+
+    /**
+     * 用远端版本覆盖本地。
+     *
+     * 【为什么用 updateNote 而不是 insert】
+     * 同步下载分两种情况：
+     * 1. 本地没有这条（远端新建）→ 需要 insert，id 由远端指定
+     * 2. 本地有但较旧（远端更新）→ 需要 update
+     *
+     * 用 `@Insert(onConflict = REPLACE)` 语义最省事，但 `NoteDao.insertNote` 是
+     * 普通 `@Insert`（冲突会抛异常）。所以这里先查本地是否存在，分别处理。
+     *
+     * 【保留 encryptedAt】
+     * 那是"本机加密时间"，属于本机元数据，云端没有这个字段，不能被覆盖成 0，
+     * 否则 UI 上"加密于 X"的信息会丢失。
+     */
+    override suspend fun applyRemoteNote(remote: RemoteNote) {
+        val local = noteDao.getNoteById(remote.id)
+        val merged = Note(
+            id = remote.id,
+            title = remote.title,
+            content = remote.content,
+            isArchived = remote.isArchived,
+            isPinned = remote.isPinned,
+            isEncrypted = remote.isEncrypted,
+            encryptedAt = local?.encryptedAt ?: 0L,
+            lastModified = remote.lastModified,
+            version = remote.version,
+            isDeleted = remote.isDeleted,
+            deletedAt = remote.deletedAt
+        )
+        if (local == null) noteDao.insertNote(merged) else noteDao.updateNote(merged)
     }
 
     override suspend fun deleteAllNotes() = noteDao.deleteAllNotes()

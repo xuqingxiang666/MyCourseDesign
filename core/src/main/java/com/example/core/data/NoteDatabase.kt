@@ -5,7 +5,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.core.data.dao.NoteDao
+import com.example.core.data.dao.RemoteNoteDao
 import com.example.core.data.entity.Note
+import com.example.core.data.entity.RemoteNote
 
 /**
  * 应用的 Room 数据库。
@@ -24,10 +26,12 @@ import com.example.core.data.entity.Note
  * 【版本历史】
  * - v1：初始版本（id/title/content/isArchived/isPinned/isEncrypted/lastModified/version）
  * - v2：新增 `encryptedAt` 字段，用于记录加密时间（配合加密与生物识别功能）
+ * - v3：新增 `isDeleted` / `deletedAt`（软删除，供同步冲突解决使用），
+ *       并创建 `remote_notes` 表扮演云端
  */
 @Database(
-    entities = [Note::class],
-    version = 2,
+    entities = [Note::class, RemoteNote::class],
+    version = 3,
     exportSchema = true
 )
 abstract class NoteDatabase : RoomDatabase() {
@@ -38,6 +42,14 @@ abstract class NoteDatabase : RoomDatabase() {
      * Room 生成的实现类会自动 new 出 `NoteDao_Impl` 并缓存，多次调用返回同一实例。
      */
     abstract fun noteDao(): NoteDao
+
+    /**
+     * 返回"云端"笔记表的 DAO。
+     *
+     * 注意它不是 Rem 的远端服务，而是同一数据库里的另一张表，
+     * 用来在课设范围内模拟同步——详见 [RemoteNote] 的类注释。
+     */
+    abstract fun remoteNoteDao(): RemoteNoteDao
 
     companion object {
         /** 数据库文件名。存放在 `/data/data/<包名>/databases/note_database.db`。 */
@@ -63,6 +75,46 @@ abstract class NoteDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "ALTER TABLE notes ADD COLUMN encryptedAt INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        /**
+         * 版本 2 → 3 的迁移：给 notes 增加软删除字段，并创建 remote_notes 表。
+         *
+         * 【两件事都要做】
+         * 1. `ALTER TABLE notes ADD COLUMN ...` 给已有表加两列
+         * 2. `CREATE TABLE remote_notes ...` 建新表
+         *
+         * 【CREATE TABLE 的 SQL 必须和 Room 期望的完全一致】
+         * Room 启动时会把"磁盘上实际的表结构"和"实体声明的表结构"逐列比对：
+         * 列名、类型、是否 NOT NULL、默认值、主键位置，任何一项不同都会抛
+         * `IllegalStateException: Migration didn't properly handle: remote_notes(...)`。
+         * 所以这里的 SQL 是照着 Room 的生成规则手写的：主键写成表级 `PRIMARY KEY(id)`，
+         * 所有列 NOT NULL 且**不写 DEFAULT**（实体侧也没有 default，两边才一致）。
+         *
+         * 【坑：不要在这里给列加 DEFAULT】
+         * 上一版迁移 `encryptedAt` 就踩过：实体没有声明默认值时，
+         * SQL 里写了 `DEFAULT 0` 会导致两边对不上。要么两边都写（用
+         * `@ColumnInfo(defaultValue = "0")`），要么两边都不写。
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE notes ADD COLUMN deletedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS remote_notes (" +
+                        "id INTEGER NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "content TEXT NOT NULL, " +
+                        "isEncrypted INTEGER NOT NULL, " +
+                        "isArchived INTEGER NOT NULL, " +
+                        "isPinned INTEGER NOT NULL, " +
+                        "isDeleted INTEGER NOT NULL, " +
+                        "deletedAt INTEGER NOT NULL, " +
+                        "lastModified INTEGER NOT NULL, " +
+                        "version INTEGER NOT NULL, " +
+                        "PRIMARY KEY(id))"
                 )
             }
         }

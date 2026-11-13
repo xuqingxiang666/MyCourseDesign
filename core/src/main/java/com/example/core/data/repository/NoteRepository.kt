@@ -1,6 +1,7 @@
 package com.example.core.data.repository
 
 import com.example.core.data.entity.Note
+import com.example.core.data.entity.RemoteNote
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -71,7 +72,13 @@ interface NoteRepository {
     /** 更新一条笔记（整体覆盖）。 */
     suspend fun updateNote(note: Note)
 
-    /** 删除一条笔记。 */
+    /**
+     * 删除一条笔记（**软删除**）。
+     *
+     * 只是打上 `isDeleted = 1` 标记并记录删除时间，行仍然留在表里。
+     * 原因见 [com.example.core.data.entity.Note.isDeleted]：同步需要知道
+     * "这条笔记是被删掉的"，才能把删除操作同步出去，否则会造成"删了又复活"。
+     */
     suspend fun deleteNote(note: Note)
 
     /** 按主键删除，不需要先查出对象。 */
@@ -112,6 +119,21 @@ interface NoteRepository {
      * 调用方拿到明文后再自行调用 [setEncryption] 落库。
      */
     suspend fun decryptNote(note: Note): String?
+
+    /**
+     * 取出包含已删除的全部笔记（同步用）。
+     *
+     * 冲突解决必须能看到删除记录，所以不能复用 [observeActiveNotes] 这类带过滤的查询。
+     */
+    suspend fun getAllNotesIncludingDeleted(): List<Note>
+
+    /**
+     * 用远端版本覆盖本地（同步下载时调用）。
+     *
+     * 保留本地的 `encryptedAt`：它是"本机加密时间"，属于本机元数据，
+     * 云端没有这个概念，不该被覆盖掉。
+     */
+    suspend fun applyRemoteNote(remote: RemoteNote)
 
     /** 清空全部笔记，仅测试使用。 */
     suspend fun deleteAllNotes()
