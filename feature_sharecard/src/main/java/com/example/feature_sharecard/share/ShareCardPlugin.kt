@@ -1,6 +1,8 @@
 package com.example.feature_sharecard.share
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 
 /**
  * 分享卡片插件对外的统一契约。
@@ -12,8 +14,8 @@ import android.graphics.Bitmap
  *
  * 【能力会随提交逐步增加】
  * - 第一次提交：`exportCsv`
- * - 本次：`renderCard`（生成 Bitmap）
- * - 后续：`shareCard`（通过 FileProvider 分享成文件）
+ * - 第二次提交：`renderCard`（生成 Bitmap）
+ * - 本次：`createCardUri` / `createCsvUri`（落盘 + FileProvider 授权）
  *
  * 之所以不在第一个提交里就把所有方法声明出来，是因为**每个提交都必须能编译通过**：
  * 声明了却没人实现，编译就不过。
@@ -34,4 +36,21 @@ interface ShareCardPlugin {
      * @param config 样式配置；不传则使用默认紫色主题与 900×1200 尺寸
      */
     fun renderCard(note: ShareNote, config: ShareCardConfig = ShareCardConfig()): Bitmap
+
+    /**
+     * 渲染卡片并写到缓存目录，返回可分享的 content:// Uri。
+     *
+     * 返回 Uri 而不是 File，是为了让调用方**无法**用 file:// 方式分享
+     * （那会在 API 24+ 抛 FileUriExposedException）。
+     */
+    fun createCardUri(
+        context: Context,
+        note: ShareNote,
+        config: ShareCardConfig = ShareCardConfig()
+    ): Uri
+
+    /**
+     * 把多笔记导出为 CSV 文件，返回可分享的 content:// Uri。
+     */
+    fun createCsvUri(context: Context, notes: List<ShareNote>): Uri
 }

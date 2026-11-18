@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider 的可共享目录白名单。
+
+  只有这里声明的目录，才能通过 FileProvider 生成 content:// Uri 交给别的 App 读取。
+  这是一个**安全边界**：如果不做限制，任何第三方应用拿着 Uri 就能读整个私有目录。
+
+  这里只开放 cache 下的 share_cards/：
+  - 分享卡片 PNG
+  - 导出的 CSV
+  都是临时文件，放在缓存目录里，系统空间不足时可以被清理，符合语义。
+-->
+<paths>
+    <cache-path
+        name="share_cards"
+        path="share_cards/" />
+</paths>

@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      FileProvider：把私有目录里的文件以 content:// Uri 的形式安全地分享出去。
+
+      【为什么需要它】
+      从 Android 7.0（API 24）开始，直接传 file:// Uri 会抛
+      FileUriExposedException —— 因为接收方拿到路径就能读你所有私有文件，
+      等于把沙箱捅穿。FileProvider 改成 content:// 形式，配合临时授权，
+      对方只能读到你指定的那一个文件。
+
+      【authorities 里的 ${applicationId} 是什么】
+      这是 Manifest 占位符，合并到主 App 时会被替换成 App 的 applicationId。
+      用占位符而不是写死包名，是为了让这个模块**能被任何 App 复用** ——
+      这也是"伴生插件"应有的样子。
+
+      【grantUriPermissions = true】
+      允许我们对某个 Uri 临时授予读写权限（配合
+      Intent.FLAG_GRANT_READ_URI_PERMISSION 使用）。
+    -->
+    <application>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.sharecard.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/sharecard_file_paths" />
+        </provider>
+
+    </application>
+
 </manifest>

@@ -1,6 +1,8 @@
 package com.example.feature_sharecard.share
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 
 /**
  * [ShareCardPlugin] 的实现。
@@ -19,4 +21,16 @@ object ShareCardPluginImpl : ShareCardPlugin {
 
     override fun renderCard(note: ShareNote, config: ShareCardConfig): Bitmap =
         ShareCardRenderer.render(note, config)
+
+    override fun createCardUri(
+        context: Context,
+        note: ShareNote,
+        config: ShareCardConfig
+    ): Uri {
+        val bitmap = renderCard(note, config)
+        return ShareCardFileStore.saveCardImage(context, note, bitmap, config)
+    }
+
+    override fun createCsvUri(context: Context, notes: List<ShareNote>): Uri =
+        ShareCardFileStore.saveCsv(context, exportCsv(notes))
 }
