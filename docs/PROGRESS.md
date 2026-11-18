@@ -1067,6 +1067,76 @@ app ──依赖──> ShareCardPlugin（接口） ←──实现── ShareC
 
 ---
 
+### 第 22 次提交：补充 Repository 层单元测试（覆盖率达标）
+
+> 状态：**core 行覆盖率 46.0% → 81.4%，项目逻辑层 68.0%（要求 ≥60%）**
+
+#### 一、为什么之前覆盖率不达标
+
+第一次用 JaCoCo 统计，core 只有 **46.0%**。缺口全在数据层：
+
+| 未覆盖的类 | 行数 |
+|---|---|
+| `NoteRepositoryImpl` | 107 |
+| `SyncRepository` | 100+ |
+| `LocalRemoteDataSource` | 8 |
+| `CryptoManager` | 46 |
+
+原因是这些类**依赖 Android 类型**：`CryptoManager` 需要 `Context` 和
+`EncryptedSharedPreferences`，在 JVM 单元测试里根本构造不出来。
+
+#### 二、可测性改造：抽出 NoteCrypto 接口
+
+```kotlin
+interface NoteCrypto {              // 新增
+    fun encrypt(plaintext: String): String?
+    fun decrypt(ciphertext: String): String?
+}
+class CryptoManager(...) : NoteCrypto   // Android 实现
+```
+
+`NoteRepositoryImpl` 改为依赖接口，Hilt 里用 `@Binds` 绑定实现。
+于是测试可以注入假加密器，**不需要 Android**。这是"依赖倒置"最实际的收益。
+
+#### 三、补的测试
+
+| 测试类 | 用例 | 覆盖内容 |
+|---|---|---|
+| `NoteRepositoryImplTest` | 22 | 新建/查询/软删除、加密三条路径（已加密/成功/密钥不可用）、解密、同步覆盖保留 encryptedAt |
+| `SyncRepositoryTest` | 14 | plan 不改数据、上传/下载、删除传播、counts、模拟另一台设备改删 |
+| 配套测试替身 | — | `FakeNoteDao`（内存版 DAO）、`FakeNoteCrypto`、`FakeRemoteDataSource`、`FakeNoteRepository` |
+
+`NoteDao` 是接口（Room 编译期生成实现），所以测试里能自己实现一份内存版，
+不需要 SQLite、不需要 Robolectric。
+
+#### 四、覆盖率结果（JaCoCo 0.8.11）
+
+| 统计口径 | 行覆盖 | 是否达标 |
+|---|---|---|
+| **逻辑层**（排除 UI 与生成代码） | **630/926 = 68.0%** | ✅ |
+| core 模块（整体） | 333/409 = **81.4%** | ✅ |
+| 全项目（含 Activity/Adapter/Renderer/DataBinding） | 657/1978 = 33.2% | ❌ |
+
+**逻辑层分模块**：core 84.6%、app 52.8%、sharecard 95.1%。
+
+**为什么全项目只有 33.2%**：Activity、Adapter、Markdown/ShareCard 渲染器
+（依赖 Canvas/Spannable）、DataBinding 生成类都没有单元测试 ——
+它们需要 **Robolectric 或仪器测试（Espresso）**，不属于"单元测试"范畴。
+这是覆盖率统计的通用做法：把"需要 Android 运行时"的类排除在外。
+
+#### 五、如何复现
+
+覆盖率统计通过 **Gradle init 脚本**完成，**没有改动任何 build.gradle.kts**：
+
+```bash
+gradlew --init-script docs/tools/jacoco.init.gradle :core:coverageReport
+# 报告：core/build/reports/jacoco/coverageReport/html/index.html
+```
+
+JaCoCo 0.8.11 从阿里云 Maven 下载（首次需要联网），之后走本地缓存。
+
+---
+
 ## 实测记录（模拟器 Pixel_10_Pro / E 盘）
 
 ### 第 2 次提交后（`20fa3c1`）—— 首次跑通

@@ -36,7 +36,7 @@ import javax.inject.Singleton
 @Singleton
 class CryptoManager @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : NoteCrypto {
 
     /**
      * 加密后的 SharedPreferences。
@@ -51,7 +51,7 @@ class CryptoManager @Inject constructor(
      *
      * @return Base64 字符串；密钥不可用或加密失败时返回 null
      */
-    fun encrypt(plaintext: String): String? {
+    override fun encrypt(plaintext: String): String? {
         val key = encryptionKey() ?: return null
         return try {
             val payload = CryptoEngine.encrypt(key, plaintext)
@@ -68,7 +68,7 @@ class CryptoManager @Inject constructor(
      * @return 明文；**任何失败（Base64 非法、密钥不匹配、数据被篡改）都返回 null**，
      *         由调用方决定是显示"无法解密"还是保持密文原样
      */
-    fun decrypt(payload: String): String? {
+    override fun decrypt(payload: String): String? {
         val key = encryptionKey() ?: return null
         return try {
             val bytes = Base64.decode(payload, Base64.NO_WRAP)

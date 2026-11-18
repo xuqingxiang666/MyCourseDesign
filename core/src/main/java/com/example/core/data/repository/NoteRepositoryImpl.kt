@@ -3,7 +3,7 @@ package com.example.core.data.repository
 import com.example.core.data.dao.NoteDao
 import com.example.core.data.entity.Note
 import com.example.core.data.entity.RemoteNote
-import com.example.core.security.CryptoManager
+import com.example.core.security.NoteCrypto
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -26,7 +26,7 @@ import javax.inject.Inject
  */
 class NoteRepositoryImpl @Inject constructor(
     private val noteDao: NoteDao,
-    private val cryptoManager: CryptoManager
+    private val cryptoManager: NoteCrypto
 ) : NoteRepository {
 
     // ==================== 查询 ====================

@@ -1,0 +1,40 @@
+// 临时 init 脚本：为 Android 模块挂上 JaCoCo 覆盖率报告，不改任何 build.gradle.kts
+allprojects { p ->
+    p.plugins.withId('com.android.application') { applyCoverage(p) }
+    p.plugins.withId('com.android.library') { applyCoverage(p) }
+}
+
+def applyCoverage(Project p) {
+    p.apply plugin: 'jacoco'
+    p.jacoco { toolVersion = '0.8.11' }
+
+    p.tasks.withType(Test).configureEach { t ->
+        t.extensions.configure(org.gradle.testing.jacoco.plugins.JacocoTaskExtension) { ext ->
+            ext.includeNoLocationClasses = true
+            ext.excludes = ['jdk.internal.*']
+        }
+    }
+
+    p.tasks.register('coverageReport', org.gradle.testing.jacoco.tasks.JacocoReport) { r ->
+        r.group = 'verification'
+        r.dependsOn p.tasks.matching { it.name == 'testDebugUnitTest' }
+        r.reports {
+            xml.required = true
+            html.required = true
+            csv.required = true
+        }
+        def excludes = [
+            '**/R.class', '**/R$*.class', '**/BuildConfig.*',
+            '**/Manifest*.*', '**/*Test*.*', '**/androidTest/**',
+            '**/*$Hilt*.*', '**/*_Hilt*.*', '**/*_Factory*.*', '**/*_Impl*.*',
+            '**/*_MembersInjector*.*', '**/di/**', '**/hilt/**',
+            '**/*Database_Impl*.*', '**/*Dao_Impl*.*'
+        ]
+        r.classDirectories.from(
+            p.fileTree("${p.buildDir}/tmp/kotlin-classes/debug") { exclude excludes },
+            p.fileTree("${p.buildDir}/intermediates/javac/debug/classes") { exclude excludes }
+        )
+        r.sourceDirectories.from("${p.projectDir}/src/main/java", "${p.projectDir}/src/main/kotlin")
+        r.executionData.from(p.fileTree(p.buildDir) { include '**/*.exec' })
+    }
+}

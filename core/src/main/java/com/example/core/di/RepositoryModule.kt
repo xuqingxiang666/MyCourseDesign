@@ -1,6 +1,8 @@
 package com.example.core.di
 
 import com.example.core.data.remote.LocalRemoteDataSource
+import com.example.core.security.CryptoManager
+import com.example.core.security.NoteCrypto
 import com.example.core.data.remote.RemoteDataSource
 import com.example.core.data.repository.NoteRepository
 import com.example.core.data.repository.NoteRepositoryImpl
@@ -69,4 +71,14 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRemoteDataSource(impl: LocalRemoteDataSource): RemoteDataSource
+
+    /**
+     * 把加解密能力绑定到 Android 实现。
+     *
+     * Repository 只依赖 [NoteCrypto] 接口，所以单元测试可以注入假实现，
+     * 不需要 Android 的 EncryptedSharedPreferences。
+     */
+    @Binds
+    @Singleton
+    abstract fun bindNoteCrypto(impl: CryptoManager): NoteCrypto
 }
