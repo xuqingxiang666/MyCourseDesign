@@ -1,5 +1,7 @@
 package com.example.feature_sharecard.share
 
+import android.graphics.Bitmap
+
 /**
  * [ShareCardPlugin] 的实现。
  *
@@ -14,4 +16,7 @@ package com.example.feature_sharecard.share
 object ShareCardPluginImpl : ShareCardPlugin {
 
     override fun exportCsv(notes: List<ShareNote>): String = CsvExporter.export(notes)
+
+    override fun renderCard(note: ShareNote, config: ShareCardConfig): Bitmap =
+        ShareCardRenderer.render(note, config)
 }
