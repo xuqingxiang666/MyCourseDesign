@@ -42,6 +42,8 @@ android {
 
 dependencies {
     implementation(project(":core")) // 依赖 core 模块
+    // P4 伴生模块：分享卡片 / CSV 导出。模块间只通过 share 包里的契约交互。
+    implementation(project(":feature_sharecard"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

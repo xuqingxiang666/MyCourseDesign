@@ -228,6 +228,15 @@ class MainActivity : AppCompatActivity() {
             actions += { changeEncryption(note, encrypt = true) }
         }
 
+        // 分享 / 导出（P4 伴生模块）。
+        // 分享卡片对加密笔记会返回 BlockedEncrypted，由 ShareHelper 统一提示。
+        labels += getString(R.string.action_share_card)
+        actions += { ShareHelper.toastFor(this, ShareHelper.shareCard(this, note)) }
+
+        // CSV 导出是"整库导出"，与具体某条笔记无关，所以放在最后一项
+        labels += getString(R.string.action_export_csv)
+        actions += { exportAllCsv() }
+
         labels += getString(R.string.action_delete)
         actions += { confirmDelete(note) }
 
@@ -340,6 +349,18 @@ class MainActivity : AppCompatActivity() {
             viewModel.removeEncryption(note) { success ->
                 toast(if (success) R.string.toast_decrypted else R.string.toast_decrypt_failed)
             }
+        }
+    }
+
+    /**
+     * 导出全部笔记为 CSV 并调起系统分享。
+     *
+     * 从 ViewModel 取"一次性快照"（不是观察列表），因为导出只需要当前数据，
+     * 不需要持续订阅数据库变化。
+     */
+    private fun exportAllCsv() {
+        viewModel.getAllNotesForExport { notes ->
+            ShareHelper.toastFor(this, ShareHelper.shareCsv(this, notes))
         }
     }
 

@@ -46,6 +46,17 @@
     <string name="preview_empty">暂无内容可预览</string>
     <string name="toast_saved_auto">已自动保存</string>
 
+    <!-- ==================== 分享 / 导出 ==================== -->
+    <string name="action_share_card">分享卡片</string>
+    <string name="action_export_csv">导出 CSV</string>
+    <string name="share_chooser_card">分享笔记卡片</string>
+    <string name="share_chooser_csv">导出笔记 CSV</string>
+    <string name="share_done">已生成 %1$d 条内容，请选择分享方式</string>
+    <string name="share_csv_done_with_skip">已导出 %1$d 条笔记（跳过 %2$d 条加密笔记）</string>
+    <string name="share_encrypted_blocked">加密笔记不支持分享，请先取消加密</string>
+    <string name="share_nothing">没有可分享的笔记</string>
+    <string name="share_failed">分享失败：%1$s</string>
+
     <!-- ==================== 同步演示 ==================== -->
     <string name="sync_demo_title">模拟同步演示</string>
     <string name="sync_demo_counts">本地 %1$d 条（已删除 %2$d 条）｜ 云端 %3$d 条</string>

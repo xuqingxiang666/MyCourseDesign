@@ -143,6 +143,18 @@ class NoteViewModel @Inject constructor(
     }
 
     /**
+     * 取出全部笔记快照，供 CSV 导出使用。
+     *
+     * 与观察列表的区别：导出只需要"导出那一刻"的数据，不需要持续订阅。
+     * 用回调把结果送回 UI 线程，避免 UI 层直接接触 Repository。
+     */
+    fun getAllNotesForExport(onResult: (List<Note>) -> Unit) {
+        viewModelScope.launch {
+            onResult(noteRepository.getAllNotesOnce())
+        }
+    }
+
+    /**
      * 加密一条笔记。
      *
      * @param onResult 在主线程回调；true 表示成功

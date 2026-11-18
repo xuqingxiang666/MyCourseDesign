@@ -101,7 +101,11 @@ $env:ANDROID_PREFS_ROOT = "E:\.android"
 | 14 | `feat(app): Markdown格式工具栏（选中文字点按钮加粗/斜体/列表）` | **待提交** | **代码 + 21个单测** |
 | 15 | `feat(core): 笔记软删除与远端数据源抽象` | **待提交** | **核心代码** |
 | 16 | `feat(core): 基于lastModified的LWW冲突解决机制` | **待提交** | **核心代码 + 29个单测** |
-| 17 | `feat(app): 模拟同步演示界面` | **待提交** | **核心代码** |
+| 17 | `feat(app): 模拟同步演示界面` | `ca5650a` | **核心代码** |
+| 18 | `feat(sharecard): 对外契约与CSV导出（UTF-8 BOM）` | `cf3c82b` | **核心代码 + 15单测** |
+| 19 | `feat(sharecard): 分享卡片Bitmap绘制` | `77bc10e` | **核心代码 + 15单测** |
+| 20 | `feat(sharecard): FileProvider分享（卡片PNG与CSV文件）` | `5e0fcff` | **核心代码** |
+| 21 | `feat(app): 接入分享卡片与CSV导出入口` | **待提交** | **核心代码** |
 
 > **编号说明**：原计划编号与真实提交顺序在 #3 之后出现了偏移，
 > 因为 #3、#4 是仓库卫生与文档类提交，它们提前占用了序号。
@@ -992,6 +996,74 @@ class LocalRemoteDataSource : RemoteDataSource   // 现在：本地表模拟
 3. **新表的 CREATE TABLE 要与 Room 期望完全一致**：
    `remote_notes` 的迁移 SQL 是照着生成的 `3.json` 手写的（表级 `PRIMARY KEY(id)`、
    所有列 NOT NULL 且不写 DEFAULT），实测迁移一次通过。
+
+---
+
+### 第 18~21 次提交：P4 分享卡片伴生模块（已完成）
+
+> 状态：**代码完成、127 个单元测试全绿、模拟器实测通过（含卡片效果图）**
+
+#### 一、模块边界：只通过契约交互
+
+`feature_sharecard` 不依赖 App，App 也不碰插件内部实现：
+
+```
+app ──依赖──> ShareCardPlugin（接口） ←──实现── ShareCardPluginImpl
+                     │
+                     └── ShareNote（DTO，不是 Room 实体）
+```
+
+用 DTO 而不是直接传 `Note`：避免插件与数据库实体强耦合，
+也让 App 能在转换时处理"加密笔记不能分享明文"这类业务规则。
+
+#### 二、四个提交做了什么
+
+| 提交 | 内容 |
+|---|---|
+| 18 | 契约 + `ShareNote` + `CsvExporter`（UTF-8 BOM）+ 15 个单测 |
+| 19 | `TextWrapper`（折行，15 单测）+ `ShareCardConfig` + `ShareCardRenderer`（Canvas 绘制） |
+| 20 | `FileProvider` 白名单 + `ShareCardFileStore` + `createCardUri/createCsvUri` |
+| 21 | App 接入：长按菜单加「分享卡片」「导出 CSV」+ `ShareHelper` |
+
+#### 三、三个技术要点
+
+1. **CSV 的中文乱码坑**
+   Excel 打开 UTF-8 CSV 时若无 BOM 会按 GBK 猜 → 中文乱码。
+   写 `\uFEFF` 在最前 + CRLF 换行 + 含逗号/引号/换行时加引号并双写内部引号。
+
+2. **为什么必须 FileProvider**
+   API 24+ 直接传 `file://` 会抛 `FileUriExposedException`（沙箱被捅穿）。
+   而且要先写文件再传 Uri：900×1200 的 ARGB 位图约 4.3MB，
+   直接塞 Intent 会抛 `TransactionTooLargeException`（Binder 缓冲区约 1MB）。
+
+3. **折行逻辑抽成纯函数**
+   `TextWrapper.wrap(text, maxWidth, measure, maxLines)` 把"怎么量字宽"作为参数注入：
+   生产代码传 `paint::measureText`，单元测试传 `{ it.length * 10f }`。
+   于是画图逻辑也能被测到（15 个用例）。
+
+#### 四、实测证据（模拟器 API 37）
+
+| 验证项 | 结果 |
+|---|---|
+| 长按菜单 | ✅ 出现「分享卡片」「导出 CSV」 |
+| 分享卡片 | ✅ 调起系统分享面板；缓存生成 `card_4_*.png`（78KB，900×1200） |
+| 卡片效果 | ✅ 紫色渐变背景 + 白卡片 + 强调条 + 标题 + 纯文本正文 + 页脚时间/App 名 |
+| CSV 导出 | ✅ 文件 209 字节；前三字节 `EF BB BF`（BOM）；CRLF；多行字段带引号 |
+| 加密笔记分享 | ✅ Toast「加密笔记不支持分享，请先取消加密」，**未生成任何卡片文件** |
+
+截图：`29-share-sheet.png`（系统分享面板）、`30-share-card.png`（生成的卡片图）、
+`31-share-blocked.png`（加密笔记被拦截的提示）。
+
+#### 五、测试中修掉的两个问题
+
+1. **卡片正文露出 Markdown 原文**：第一版直接画 `note.content`，
+   卡片上出现 `# Course Design Notes` 和 `- ` 符号。
+   改为在 App 层用 `MarkdownParser.toPlainText()` 转纯文本再交给插件
+   （复用已有 27 个单测的代码，插件保持"只负责画"）。
+
+2. **库模块 manifest 的 `<provider>` 位置错误**：
+   直接写在 `<manifest>` 下会报 `AAPT: unexpected element <provider>`，
+   必须包在 `<application>` 里。
 
 ---
 
